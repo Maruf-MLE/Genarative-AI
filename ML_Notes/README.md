@@ -49,6 +49,7 @@
 - [x] **১২. Introduction to ANN:** Biological Neuron vs Artificial Perceptron, Input layer, Hidden layers, Output layer, and Forward Propagation. 👉 [নোট পড়ুন](./ANN_Introduction/ANN_Introduction.md)
 - [x] **১৩. Activation Functions in Neural Networks:** Why do we need non-linearity? Detailed intuition of Sigmoid, ReLU, Tanh, and Softmax functions. 👉 [নোট পড়ুন](./Activation_Functions/Activation_Functions.md)
 - [x] **১৪. Backpropagation and Optimizers:** How neural networks learn (update weights), Chain Rule intuition, and overview of Optimizers (Stochastic Gradient Descent and Adam). 👉 [নোট পড়ুন](./Backpropagation_Optimizers/Backpropagation_Optimizers.md)
+- [x] **১৪.৫ How to Improve Performance of Deep Learning Neural Network:** Data Preprocessing, Batch Normalization, Dropout, L2 Regularization, Weight Initialization (He/Xavier), Transfer Learning, Learning Rate Scheduling, Early Stopping, Data Augmentation, Hyperparameter Tuning — সব কিছু একসাথে। 👉 [নোট পড়ুন](./DL_Performance_Improvement/DL_Performance_Improvement.md)
 
 ---
 
@@ -58,6 +59,7 @@
 - [x] **১৫. Introduction to CNN & Image Processing:** Why standard ANN fails on images? Concept of Pixels, Channels (RGB), and Image Tensors. 👉 [নোট পড়ুন](./CNN_Introduction/CNN_Introduction.md)
 - [x] **১৬. The Convolution Operation:** How Filters/Kernels work, Stride, Padding, and Feature Map generation. 👉 [নোট পড়ুন](./Convolution_Operation/Convolution_Operation.md)
 - [x] **১৭. Pooling Layers & Fully Connected Network:** Max Pooling vs Average Pooling intuition, Flattening, and how the final class is predicted. 👉 [নোট পড়ুন](./Pooling_FC_Network/Pooling_FC_Network.md)
+- [x] **১৮. Transfer Learning in Keras (CNN):** Pretrained Models (VGG16, ResNet50, MobileNetV2) ব্যবহার করে Feature Extraction ও Fine-Tuning-এর সম্পূর্ণ গাইড। Frozen layers, Catastrophic Forgetting এবং ImageNet weights-এর ব্যাখ্যা। 👉 [নোট পড়ুন](./Transfer_Learning_CNN/Transfer_Learning_CNN.md)
 
 ---
 
@@ -87,5 +89,11 @@
 
 ---
 
-*🔄 নিয়মিত আপডেট হচ্ছে | 📅 শেষ আপডেট: ২০২৬-০৪-০৯*
+### ⚙️ পর্ব ৭: অপ্টিমাইজার ও ট্রেনিং কৌশল (Optimizers & Training Techniques)
+
+- [x] **২৭. Optimizers (SGD, Momentum, AdaGrad, RMSProp, Adam, AdamW):** Optimizer কী এবং কেন দরকার? সব প্রধান Optimizer-এর বিস্তারিত Math, Code, এবং Real-world use cases। 👉 [নোট পড়ুন](./Optimizers/Optimizers.md)
+
+---
+
+*🔄 নিয়মিত আপডেট হচ্ছে | 📅 শেষ আপডেট: ২০২৬-০৪-০৯ (DL Performance Improvement যোগ হয়েছে)*
 
