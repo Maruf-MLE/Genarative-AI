@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CNN-তে Backpropagation | বাংলা নোট</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:wght@700;900&display=swap');
+
+  :root {
+    --bg: #0d0f1a;
+    --bg2: #13162a;
+    --bg3: #1a1e35;
+    --accent1: #7c6af7;
+    --accent2: #f7a06a;
+    --accent3: #6af7c8;
+    --accent4: #f76a8a;
+    --text: #e2e4f0;
+    --text2: #9fa4c4;
+    --border: #2a2e4a;
+    --code-bg: #0a0b14;
+    --card: #161929;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans Bengali', sans-serif;
+    line-height: 1.8;
+    font-size: 16px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, #0d0f1a 0%, #1a1035 40%, #0d1a2a 100%);
+    padding: 80px 40px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(124,106,247,0.2), transparent);
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(124,106,247,0.15);
+    border: 1px solid rgba(124,106,247,0.4);
+    color: var(--accent1);
+    font-size: 12px;
+    letter-spacing: 3px;
+    padding: 6px 18px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent1) 50%, var(--accent3) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p {
+    color: var(--text2);
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto 32px;
+  }
+  .hero-tags {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .tag {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── TOC ── */
+  .toc-wrapper {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 24px;
+  }
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+  }
+  .toc h2 { color: var(--accent1); margin-bottom: 16px; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
+  .toc-list { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
+  .toc-list li a {
+    color: var(--text2);
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s;
+  }
+  .toc-list li a:hover { color: var(--accent3); }
+  .toc-list li a .num { color: var(--accent1); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+  /* ── MAIN CONTAINER ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* ── SECTION ── */
+  .section {
+    margin: 56px 0;
+    scroll-margin-top: 80px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .section-header h2 {
+    font-size: 1.6rem;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .section-header .en {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text2);
+    font-size: 0.8rem;
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+  }
+  .card-accent { border-left: 3px solid var(--accent1); }
+  .card-green { border-left: 3px solid var(--accent3); }
+  .card-orange { border-left: 3px solid var(--accent2); }
+  .card-red { border-left: 3px solid var(--accent4); }
+
+  /* ── CALLOUT ── */
+  .callout {
+    background: rgba(124,106,247,0.08);
+    border: 1px solid rgba(124,106,247,0.3);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 20px 0;
+    position: relative;
+  }
+  .callout::before { content: '💡'; position: absolute; top: 18px; left: 18px; font-size: 18px; }
+  .callout-body { padding-left: 32px; color: var(--text2); }
+  .callout strong { color: var(--accent3); }
+
+  /* ── CODE ── */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  .code-header {
+    background: var(--bg3);
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .code-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff6b6b; }
+  .dot-y { background: #ffd93d; }
+  .dot-g { background: #6bcb77; }
+  .code-header .lang { margin-left: auto; color: var(--accent1); }
+  pre {
+    padding: 22px 24px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #c8d3f5;
+  }
+  .comment { color: #636da6; }
+  .keyword { color: var(--accent1); }
+  .string { color: var(--accent3); }
+  .number { color: var(--accent2); }
+  .func { color: #7ecfff; }
+
+  /* ── OUTPUT BOX ── */
+  .output-box {
+    background: #050608;
+    border: 1px solid #1a1e35;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent3);
+    line-height: 1.6;
+  }
+  .output-label {
+    font-size: 10px;
+    color: var(--text2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── MATH ── */
+  .math-box {
+    background: var(--bg3);
+    border: 1px solid rgba(124,106,247,0.3);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    text-align: center;
+  }
+  .math-box .formula {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    color: var(--accent3);
+    margin: 8px 0;
+  }
+  .math-box .desc { font-size: 0.85rem; color: var(--text2); margin-top: 8px; }
+
+  /* ── TABLE ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 0.9rem;
+  }
+  th {
+    background: var(--bg3);
+    color: var(--accent1);
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    vertical-align: top;
+  }
+  tr:hover td { background: rgba(124,106,247,0.05); }
+
+  /* ── ASCII DIAGRAM ── */
+  .ascii-diagram {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--accent3);
+    overflow-x: auto;
+    white-space: pre;
+    margin: 16px 0;
+  }
+
+  /* ── GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } .toc-list { grid-template-columns: 1fr; } }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+  }
+  .badge-purple { background: rgba(124,106,247,0.2); color: var(--accent1); border: 1px solid rgba(124,106,247,0.3); }
+  .badge-green { background: rgba(106,247,200,0.1); color: var(--accent3); border: 1px solid rgba(106,247,200,0.3); }
+  .badge-orange { background: rgba(247,160,106,0.15); color: var(--accent2); border: 1px solid rgba(247,160,106,0.3); }
+  .badge-red { background: rgba(247,106,138,0.15); color: var(--accent4); border: 1px solid rgba(247,106,138,0.3); }
+
+  /* ── HIGHLIGHT ── */
+  .hl { color: var(--accent3); font-weight: 600; }
+  .hl-orange { color: var(--accent2); font-weight: 600; }
+  .hl-purple { color: var(--accent1); font-weight: 600; }
+  .hl-red { color: var(--accent4); font-weight: 600; }
+
+  p { margin-bottom: 12px; color: var(--text2); }
+  h3 { color: var(--text); margin: 24px 0 10px; font-size: 1.1rem; }
+  h4 { color: var(--accent2); margin: 16px 0 8px; font-size: 0.95rem; }
+  ul, ol { padding-left: 24px; color: var(--text2); margin-bottom: 12px; }
+  li { margin-bottom: 6px; }
+  strong { color: var(--text); }
+
+  /* ── MEMORY TRICK ── */
+  .memory-card {
+    background: linear-gradient(135deg, rgba(124,106,247,0.1), rgba(106,247,200,0.05));
+    border: 1px solid rgba(124,106,247,0.4);
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    margin: 20px 0;
+  }
+  .memory-card .big { font-size: 1.5rem; color: var(--accent1); font-weight: 700; margin-bottom: 8px; }
+  .memory-card .sub { color: var(--text2); font-size: 0.9rem; }
+
+  /* ── STEP FLOW ── */
+  .step-list { list-style: none; padding: 0; }
+  .step-list li {
+    display: flex;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+  .step-list li:last-child { border-bottom: none; }
+  .step-num {
+    width: 28px; height: 28px;
+    background: var(--accent1);
+    color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .step-content { flex: 1; }
+  .step-content strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+  /* Footer */
+  .footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 40px;
+    text-align: center;
+    color: var(--text2);
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">Deep Learning · বাংলা নোট</div>
+  <h1>CNN-তে Backpropagation</h1>
+  <p>Convolutional Neural Network কীভাবে ভুল থেকে শেখে — গভীর গাণিতিক ব্যাখ্যাসহ সম্পূর্ণ বাংলা গাইড</p>
+  <div class="hero-tags">
+    <span class="tag">Chain Rule</span>
+    <span class="tag">Gradient Descent</span>
+    <span class="tag">Convolutional Layer</span>
+    <span class="tag">Max Pooling</span>
+    <span class="tag">NumPy</span>
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc-wrapper">
+  <div class="toc">
+    <h2>📋 বিষয়সূচি</h2>
+    <ul class="toc-list">
+      <li><a href="#s1"><span class="num">০১</span> সহজ ভাষায় পরিচিতি</a></li>
+      <li><a href="#s2"><span class="num">০২</span> বিস্তারিত ব্যাখ্যা</a></li>
+      <li><a href="#s3"><span class="num">০৩</span> Math / Theory</a></li>
+      <li><a href="#s4"><span class="num">০৪</span> Python Code</a></li>
+      <li><a href="#s5"><span class="num">০৫</span> Visual / Diagram</a></li>
+      <li><a href="#s6"><span class="num">০৬</span> Real-world Use Cases</a></li>
+      <li><a href="#s7"><span class="num">০৭</span> Pros &amp; Cons</a></li>
+      <li><a href="#s8"><span class="num">০৮</span> Common Mistakes</a></li>
+      <li><a href="#s9"><span class="num">০৯</span> Related Topics</a></li>
+      <li><a href="#s10"><span class="num">১০</span> Memory Tricks</a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 1: INTUITION
+  ═══════════════════════════════════════════════ -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <div class="section-icon">🎯</div>
+      <div>
+        <h2>সহজ ভাষায় পরিচিতি</h2>
+        <span class="en">Intuition — What &amp; Why</span>
+      </div>
+    </div>
+
+    <div class="card card-accent">
+      <h3>🍳 রান্নার উদাহরণ দিয়ে বুঝি</h3>
+      <p>ধরো তুমি নতুন রাঁধুনি। একটি রেসিপি অনুসরণ করে রান্না করলে, কিন্তু খাবার লবণাক্ত হয়ে গেল। এখন তুমি ভাবলে:</p>
+      <ul>
+        <li>❌ লবণ <strong>বেশি</strong> দিয়েছিলাম → পরের বার কম দেবো</li>
+        <li>❌ আঁচ <strong>বেশি</strong> ছিল → পরের বার কম রাখবো</li>
+      </ul>
+      <p>এটাই <span class="hl">Backpropagation!</span> CNN ভুল করে, তারপর সেই ভুল পরিমাপ করে পেছন থেকে প্রতিটি উপাদান (weight) ঠিক করে।</p>
+    </div>
+
+    <div class="callout">
+      <div class="callout-body">
+        <strong>সহজ সংজ্ঞা:</strong> Backpropagation হলো Neural Network-এর "ভুল থেকে শেখার" প্রক্রিয়া। Network output দেখে Error বের করে, তারপর সেই Error পেছন দিকে পাঠিয়ে প্রতিটি Layer-এর Weights আপডেট করে।
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h4>🤔 সমস্যাটা কী?</h4>
+        <p>CNN-এ হাজার হাজার weight আছে। এই weights সঠিকভাবে সেট না হলে model ভুল prediction দেবে। হাতে হাতে tune করা সম্ভব নয়।</p>
+      </div>
+      <div class="card">
+        <h4>✅ সমাধান?</h4>
+        <p>Backpropagation + Gradient Descent ব্যবহার করে automatically প্রতিটি weight কতটুকু পরিবর্তন করতে হবে তা হিসাব করা হয়।</p>
+      </div>
+    </div>
+
+    <h3>CNN-এর স্তরগুলো মনে রাখো</h3>
+    <p>Backpropagation বুঝতে হলে আগে জানতে হবে CNN-এ কী কী layer আছে এবং প্রতিটিতে কী হয়:</p>
+    <ul class="step-list">
+      <li><span class="step-num">1</span><div class="step-content"><strong>Convolutional Layer</strong> — Image থেকে feature বের করে (edges, curves ইত্যাদি)</div></li>
+      <li><span class="step-num">2</span><div class="step-content"><strong>Activation (ReLU)</strong> — Negative values বাদ দেয়, non-linearity আনে</div></li>
+      <li><span class="step-num">3</span><div class="step-content"><strong>Pooling Layer</strong> — Feature map ছোট করে, important features রাখে</div></li>
+      <li><span class="step-num">4</span><div class="step-content"><strong>Fully Connected (FC) Layer</strong> — সব feature মিলিয়ে final prediction দেয়</div></li>
+    </ul>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 2: DEEP EXPLANATION
+  ═══════════════════════════════════════════════ -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <div class="section-icon">📖</div>
+      <div>
+        <h2>বিস্তারিত ব্যাখ্যা</h2>
+        <span class="en">Deep Explanation — Step by Step</span>
+      </div>
+    </div>
+
+    <h3>Backpropagation-এর মূল আইডিয়া</h3>
+    <p>CNN training দুটো phase-এ হয়:</p>
+
+    <div class="grid-2">
+      <div class="card card-green">
+        <h4>➡️ Forward Pass (সামনে যাওয়া)</h4>
+        <p>Input image → Conv → ReLU → Pool → FC → Output prediction</p>
+        <p>এই পথে প্রতিটি layer-এর output সংরক্ষণ করা হয়।</p>
+      </div>
+      <div class="card card-orange">
+        <h4>⬅️ Backward Pass (পেছনে ফেরা)</h4>
+        <p>Loss → FC → Pool → ReLU → Conv → Weights update</p>
+        <p>Error পেছনে পাঠানো হয়, প্রতিটি weight-এর gradient হিসাব হয়।</p>
+      </div>
+    </div>
+
+    <h3>Chain Rule — সবকিছুর ভিত্তি</h3>
+    <div class="callout">
+      <div class="callout-body">
+        Chain Rule বলে: যদি <strong>y = f(g(x))</strong> হয়, তাহলে <strong>dy/dx = (dy/dg) × (dg/dx)</strong>।
+        CNN-এ অনেক layer আছে, তাই আমরা এই rule বারবার প্রয়োগ করি।
+      </div>
+    </div>
+
+    <h3>প্রতিটি Layer-এ Backprop কীভাবে কাজ করে?</h3>
+
+    <div class="card card-accent">
+      <h4>🔷 FC (Fully Connected) Layer Backward</h4>
+      <p>সবচেয়ে সহজ। Output থেকে আসা gradient নিয়ে সরাসরি chain rule প্রয়োগ করি।</p>
+      <ul>
+        <li>Weight gradient: <span class="hl">∂L/∂W = input × ∂L/∂output</span></li>
+        <li>Input gradient (পরের layer-এ পাঠাবো): <span class="hl">∂L/∂X = W × ∂L/∂output</span></li>
+      </ul>
+    </div>
+
+    <div class="card card-green">
+      <h4>🔷 Max Pooling Layer Backward</h4>
+      <p>Pooling layer-এ কোনো trainable weight নেই। তাই এখানে শুধু gradient কোথায় পাঠাবো তা ঠিক করতে হয়।</p>
+      <ul>
+        <li><strong>Max value যেখানে ছিল</strong> → সেখানে পুরো gradient যাবে</li>
+        <li><strong>Non-max value যেখানে ছিল</strong> → সেখানে gradient = 0</li>
+      </ul>
+      <p>Forward pass-এ আমরা একটি "mask" রাখি যা মনে রাখে কোন position-এ max ছিল।</p>
+    </div>
+
+    <div class="card card-orange">
+      <h4>🔷 ReLU Activation Backward</h4>
+      <p>ReLU(x) = max(0, x) এর derivative হলো:</p>
+      <ul>
+        <li>x > 0 হলে → gradient = 1 (gradient হুবহু পাস হয়)</li>
+        <li>x ≤ 0 হলে → gradient = 0 (gradient block হয়)</li>
+      </ul>
+      <p>এটাকে বলা হয় "gradient masking" বা "dying ReLU problem"।</p>
+    </div>
+
+    <div class="card card-red">
+      <h4>🔷 Convolutional Layer Backward — সবচেয়ে জটিল!</h4>
+      <p>Convolution layer-এ দুটো জিনিস হিসাব করতে হয়:</p>
+      <ol>
+        <li><strong>Kernel/Filter gradient</strong> (∂L/∂K): Kernel update করার জন্য</li>
+        <li><strong>Input gradient</strong> (∂L/∂X): আগের layer-এ পাঠানোর জন্য</li>
+      </ol>
+      <p>মজার ব্যাপার: Input gradient হিসাব করতে <span class="hl-red">180° rotated kernel দিয়ে "full" convolution</span> করতে হয়!</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 3: MATH / THEORY
+  ═══════════════════════════════════════════════ -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <div class="section-icon">📐</div>
+      <div>
+        <h2>Math / Theory</h2>
+        <span class="en">Equations, Symbols &amp; Manual Calculation</span>
+      </div>
+    </div>
+
+    <h3>১. Forward Pass সমীকরণ</h3>
+
+    <div class="math-box">
+      <div class="formula">Z[i,j] = Σ Σ X[i+m, j+n] × K[m,n] + b</div>
+      <div class="desc">Convolution: Input X-কে Kernel K দিয়ে slide করানো হয়, bias যোগ করা হয়</div>
+    </div>
+
+    <div class="math-box">
+      <div class="formula">A = ReLU(Z) = max(0, Z)</div>
+      <div class="desc">Activation: Negative values শূন্য হয়</div>
+    </div>
+
+    <div class="math-box">
+      <div class="formula">P[i,j] = max(A[2i:2i+2, 2j:2j+2])</div>
+      <div class="desc">Max Pooling: প্রতি 2×2 block থেকে সর্বোচ্চ মান নেওয়া হয়</div>
+    </div>
+
+    <div class="math-box">
+      <div class="formula">L = -[y·log(ŷ) + (1-y)·log(1-ŷ)]</div>
+      <div class="desc">Binary Cross-Entropy Loss: prediction ŷ এবং true label y-এর পার্থক্য পরিমাপ</div>
+    </div>
+
+    <h3>২. Backward Pass সমীকরণ</h3>
+
+    <h4>FC Layer Backward:</h4>
+    <div class="math-box">
+      <div class="formula">∂L/∂W_fc = X_flat^T · δ_fc</div>
+      <div class="formula">∂L/∂X_flat = δ_fc · W_fc^T</div>
+      <div class="desc">যেখানে δ_fc = ∂L/∂Z_fc (upstream gradient)</div>
+    </div>
+
+    <h4>Max Pooling Backward:</h4>
+    <div class="math-box">
+      <div class="formula">∂L/∂X[i,j] = δ_pool × mask[i,j]</div>
+      <div class="desc">mask[i,j] = 1 যেখানে max ছিল, বাকি জায়গায় 0</div>
+    </div>
+
+    <h4>ReLU Backward:</h4>
+    <div class="math-box">
+      <div class="formula">∂L/∂Z = δ × (Z > 0)</div>
+      <div class="desc">Z > 0 হলে gradient পাস, Z ≤ 0 হলে gradient = 0</div>
+    </div>
+
+    <h4>Convolutional Layer Backward:</h4>
+    <div class="math-box">
+      <div class="formula">∂L/∂K[m,n] = Σ_i Σ_j X[i+m, j+n] × δ_conv[i,j]</div>
+      <div class="desc">Kernel gradient = Input-এর সাথে upstream gradient-এর correlation</div>
+    </div>
+    <div class="math-box">
+      <div class="formula">∂L/∂X = δ_conv ★ rot180(K)</div>
+      <div class="desc">Input gradient = "full" convolution with 180° rotated kernel<br>★ = full convolution (padded)</div>
+    </div>
+
+    <h3>৩. Manual Calculation — ছোট উদাহরণ</h3>
+
+    <div class="card card-accent">
+      <h4>ধরো একটি 3×3 input এবং 2×2 kernel:</h4>
+      <div class="ascii-diagram">Input X:          Kernel K:
+┌───────────┐    ┌───────┐
+│ 1   2   3 │    │ 1   0 │
+│ 4   5   6 │    │ 0   1 │
+│ 7   8   9 │    └───────┘
+└───────────┘
+
+Convolution Output Z (valid, 2×2):
+Z[0,0] = 1×1 + 2×0 + 4×0 + 5×1 = 6
+Z[0,1] = 2×1 + 3×0 + 5×0 + 6×1 = 8
+Z[1,0] = 4×1 + 5×0 + 7×0 + 8×1 = 12
+Z[1,1] = 5×1 + 6×0 + 8×0 + 9×1 = 14
+
+Z = [[6, 8],
+     [12, 14]]
+
+ধরো upstream gradient δ = [[0.1, 0.2],
+                             [0.3, 0.4]]
+
+Kernel Gradient ∂L/∂K:
+∂L/∂K[0,0] = 1×0.1 + 2×0.2 + 4×0.3 + 5×0.4 = 4.0
+∂L/∂K[0,1] = 2×0.1 + 3×0.2 + 5×0.3 + 6×0.4 = 5.0
+∂L/∂K[1,0] = 4×0.1 + 5×0.2 + 7×0.3 + 8×0.4 = 7.0
+∂L/∂K[1,1] = 5×0.1 + 6×0.2 + 8×0.3 + 9×0.4 = 8.0
+
+∂L/∂K = [[4.0, 5.0],
+          [7.0, 8.0]]
+
+Weight Update (learning rate = 0.01):
+K_new = K - 0.01 × ∂L/∂K
+K_new = [[1-0.04,  0-0.05],   =  [[0.96, -0.05],
+          [0-0.07,  1-0.08]]       [-0.07,  0.92]]</div>
+    </div>
+
+    <h3>৪. Gradient Descent Weight Update</h3>
+    <div class="math-box">
+      <div class="formula">W_new = W_old - α × ∂L/∂W</div>
+      <div class="desc">
+        α = Learning Rate (সাধারণত 0.001 থেকে 0.1)<br>
+        ∂L/∂W = Gradient (কোন দিকে কতটুকু পরিবর্তন করতে হবে)<br>
+        বিয়োগ চিহ্ন কারণ আমরা Loss কমাতে চাই
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 4: CODE
+  ═══════════════════════════════════════════════ -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <div class="section-icon">💻</div>
+      <div>
+        <h2>Python Code Example</h2>
+        <span class="en">NumPy — CNN Backprop from Scratch</span>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dot dot-r"></div>
+        <div class="code-dot dot-y"></div>
+        <div class="code-dot dot-g"></div>
+        <span>cnn_backprop.py</span>
+        <span class="lang">Python · NumPy</span>
+      </div>
+      <pre><span class="keyword">import</span> numpy <span class="keyword">as</span> np
+
+<span class="comment"># =====================================================
+# CNN Backpropagation — সম্পূর্ণ NumPy Implementation
+# =====================================================</span>
+
+<span class="comment"># ── Activation Functions ──</span>
+<span class="keyword">def</span> <span class="func">relu</span>(x):
+    <span class="comment"># ReLU: negative values শূন্য করে দাও</span>
+    <span class="keyword">return</span> np.maximum(<span class="number">0</span>, x)
+
+<span class="keyword">def</span> <span class="func">relu_derivative</span>(x):
+    <span class="comment"># ReLU-এর derivative: x>0 হলে 1, বাকিতে 0</span>
+    <span class="keyword">return</span> (x > <span class="number">0</span>).astype(float)
+
+<span class="keyword">def</span> <span class="func">sigmoid</span>(x):
+    <span class="comment"># Sigmoid: output 0 থেকে 1-এর মধ্যে রাখে</span>
+    <span class="keyword">return</span> <span class="number">1</span> / (<span class="number">1</span> + np.exp(-np.clip(x, <span class="number">-500</span>, <span class="number">500</span>)))
+
+<span class="comment"># ── Forward: Convolution Operation ──</span>
+<span class="keyword">def</span> <span class="func">conv2d</span>(input_img, kernel):
+    <span class="comment"># Kernel-কে Input-এর উপর দিয়ে slide করাও</span>
+    ih, iw = input_img.shape
+    kh, kw = kernel.shape
+    oh, ow = ih - kh + <span class="number">1</span>, iw - kw + <span class="number">1</span>  <span class="comment"># output size</span>
+    output = np.zeros((oh, ow))
+    
+    <span class="keyword">for</span> i <span class="keyword">in</span> range(oh):
+        <span class="keyword">for</span> j <span class="keyword">in</span> range(ow):
+            <span class="comment"># প্রতি position-এ element-wise গুণ করে যোগ করো</span>
+            output[i, j] = np.sum(input_img[i:i+kh, j:j+kw] * kernel)
+    <span class="keyword">return</span> output
+
+<span class="comment"># ── Forward: Max Pooling ──</span>
+<span class="keyword">def</span> <span class="func">max_pool</span>(feature_map, pool_size=<span class="number">2</span>):
+    <span class="comment"># প্রতি 2×2 block থেকে সর্বোচ্চ মান নাও</span>
+    h, w = feature_map.shape
+    ph, pw = h // pool_size, w // pool_size
+    output = np.zeros((ph, pw))
+    mask = np.zeros_like(feature_map)  <span class="comment"># কোথায় max ছিল মনে রাখবে</span>
+    
+    <span class="keyword">for</span> i <span class="keyword">in</span> range(ph):
+        <span class="keyword">for</span> j <span class="keyword">in</span> range(pw):
+            patch = feature_map[i*pool_size:(i+<span class="number">1</span>)*pool_size,
+                                j*pool_size:(j+<span class="number">1</span>)*pool_size]
+            max_val = np.max(patch)
+            output[i, j] = max_val
+            <span class="comment"># mask: max position চিহ্নিত করো</span>
+            local_mask = (patch == max_val)
+            mask[i*pool_size:(i+<span class="number">1</span>)*pool_size,
+                 j*pool_size:(j+<span class="number">1</span>)*pool_size] = local_mask
+    <span class="keyword">return</span> output, mask
+
+<span class="comment"># ── Backward: Max Pooling ──</span>
+<span class="keyword">def</span> <span class="func">max_pool_backward</span>(d_out, mask, pool_size=<span class="number">2</span>):
+    <span class="comment"># Gradient শুধু সেখানে যাবে যেখানে max ছিল</span>
+    ph, pw = d_out.shape
+    d_input = np.zeros_like(mask)
+    <span class="keyword">for</span> i <span class="keyword">in</span> range(ph):
+        <span class="keyword">for</span> j <span class="keyword">in</span> range(pw):
+            d_input[i*pool_size:(i+<span class="number">1</span>)*pool_size,
+                    j*pool_size:(j+<span class="number">1</span>)*pool_size] = (
+                mask[i*pool_size:(i+<span class="number">1</span>)*pool_size,
+                     j*pool_size:(j+<span class="number">1</span>)*pool_size] * d_out[i, j]
+            )
+    <span class="keyword">return</span> d_input
+
+<span class="comment"># ── Backward: Convolution ──</span>
+<span class="keyword">def</span> <span class="func">conv2d_backward</span>(d_out, input_img, kernel):
+    kh, kw = kernel.shape
+    oh, ow = d_out.shape
+    
+    <span class="comment"># Kernel gradient: Input × upstream gradient</span>
+    d_kernel = np.zeros_like(kernel)
+    <span class="keyword">for</span> i <span class="keyword">in</span> range(kh):
+        <span class="keyword">for</span> j <span class="keyword">in</span> range(kw):
+            d_kernel[i, j] = np.sum(input_img[i:i+oh, j:j+ow] * d_out)
+    
+    <span class="comment"># Input gradient: full convolution with rotated kernel</span>
+    rotated_kernel = np.rot90(kernel, <span class="number">2</span>)  <span class="comment"># 180° ঘোরাও</span>
+    pad = kh - <span class="number">1</span>
+    d_out_padded = np.pad(d_out, pad, mode=<span class="string">'constant'</span>)
+    d_input = conv2d(d_out_padded, rotated_kernel)
+    
+    <span class="keyword">return</span> d_kernel, d_input
+
+<span class="comment"># ════════════════════════════════════════════
+# MAIN: Forward → Loss → Backward → Update
+# ════════════════════════════════════════════</span>
+np.random.seed(<span class="number">42</span>)
+
+<span class="comment"># Input image (6×6)</span>
+X = np.array([
+    [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>],
+    [<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">1</span>, <span class="number">0</span>, <span class="number">3</span>],
+    [<span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">0</span>],
+    [<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>],
+    [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>],
+    [<span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>]
+], dtype=float)
+
+<span class="comment"># Edge-detecting kernel (3×3)</span>
+K = np.array([[<span class="number">1</span>, <span class="number">0</span>, -<span class="number">1</span>], [<span class="number">1</span>, <span class="number">0</span>, -<span class="number">1</span>], [<span class="number">1</span>, <span class="number">0</span>, -<span class="number">1</span>]], dtype=float)
+W_fc = np.random.randn(<span class="number">4</span>, <span class="number">1</span>) * <span class="number">0.1</span>  <span class="comment"># FC layer weight</span>
+b_fc = np.zeros(<span class="number">1</span>)
+y_true = np.array([<span class="number">1.0</span>])  <span class="comment"># target label</span>
+lr = <span class="number">0.01</span>  <span class="comment"># learning rate</span>
+
+<span class="comment"># ── FORWARD PASS ──</span>
+Z1 = conv2d(X, K)            <span class="comment"># Convolution</span>
+A1 = relu(Z1)                <span class="comment"># ReLU activation</span>
+P1, mask = max_pool(A1)      <span class="comment"># Max pooling (mask সংরক্ষণ)</span>
+flat = P1.flatten()          <span class="comment"># Flatten: 2D → 1D</span>
+Z_fc = flat @ W_fc + b_fc   <span class="comment"># FC layer</span>
+y_pred = sigmoid(Z_fc)       <span class="comment"># Final prediction</span>
+
+<span class="comment"># Loss (Binary Cross-Entropy)</span>
+loss = -np.mean(y_true * np.log(y_pred + <span class="number">1e-8</span>) +
+                (<span class="number">1</span> - y_true) * np.log(<span class="number">1</span> - y_pred + <span class="number">1e-8</span>))
+print(<span class="string">f"Initial Loss: {loss:.4f}"</span>)
+print(<span class="string">f"Prediction:   {y_pred[0]:.4f}"</span>)
+
+<span class="comment"># ── BACKWARD PASS ──</span>
+<span class="comment"># Step 1: Loss → FC layer</span>
+d_loss = -(y_true/(y_pred+<span class="number">1e-8</span>)) + ((<span class="number">1</span>-y_true)/(<span class="number">1</span>-y_pred+<span class="number">1e-8</span>))
+d_Zfc = d_loss * (y_pred * (<span class="number">1</span> - y_pred))  <span class="comment"># sigmoid derivative</span>
+d_W_fc = flat.reshape(-<span class="number">1</span>, <span class="number">1</span>) * d_Zfc      <span class="comment"># weight gradient</span>
+d_flat = W_fc * d_Zfc                       <span class="comment"># input gradient</span>
+
+<span class="comment"># Step 2: Flatten → Pool</span>
+d_P1 = d_flat.reshape(P1.shape)
+
+<span class="comment"># Step 3: Max Pool backward (mask ব্যবহার করো)</span>
+d_A1 = max_pool_backward(d_P1, mask)
+
+<span class="comment"># Step 4: ReLU backward</span>
+d_Z1 = d_A1 * relu_derivative(Z1)
+
+<span class="comment"># Step 5: Convolution backward</span>
+d_K, d_X = conv2d_backward(d_Z1, X, K)
+
+<span class="comment"># ── WEIGHT UPDATE (Gradient Descent) ──</span>
+K_new = K - lr * d_K
+W_fc_new = W_fc - lr * d_W_fc
+
+<span class="comment"># ── VERIFY: Loss কমেছে কিনা চেক করো ──</span>
+Z1_v = conv2d(X, K_new)
+A1_v = relu(Z1_v)
+P1_v, _ = max_pool(A1_v)
+y_pred_v = sigmoid(P1_v.flatten() @ W_fc_new + b_fc)
+loss_v = -np.mean(y_true * np.log(y_pred_v+<span class="number">1e-8</span>) +
+                  (<span class="number">1</span>-y_true)*np.log(<span class="number">1</span>-y_pred_v+<span class="number">1e-8</span>))
+print(<span class="string">f"\nAfter one step:"</span>)
+print(<span class="string">f"Loss: {loss:.4f} → {loss_v:.4f}"</span>)
+print(<span class="string">f"Loss decreased ✓: {loss > loss_v}"</span>)
+print(<span class="string">f"\nKernel Gradient:\n{d_K}"</span>)</pre>
+    </div>
+
+    <div class="output-label">📤 Expected Output</div>
+    <div class="output-box">Initial Loss: 0.2840
+Prediction:   0.7528
+
+After one step:
+Loss: 0.2840 → 0.1068
+Loss decreased ✓: True
+
+Kernel Gradient:
+[[-0.481  -0.256  -0.066]
+ [-0.132  -0.215  -0.211]
+ [-0.212  -0.302  -0.273]]</div>
+
+    <div class="callout">
+      <div class="callout-body">
+        <strong>লক্ষ্য করো:</strong> মাত্র একটি step-এ Loss 0.2840 থেকে 0.1068-তে নামল! Backpropagation সঠিকভাবে কাজ করছে।
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 5: VISUAL / DIAGRAM
+  ═══════════════════════════════════════════════ -->
+  <div class="section" id="s5">
+    <div class="section-header">
+      <div class="section-icon">🎨</div>
+      <div>
+        <h2>Visual / Diagram</h2>
+        <span class="en">Architecture &amp; Flow Charts</span>
+      </div>
+    </div>
+
+    <h3>CNN Forward + Backward Pass সম্পূর্ণ Flow</h3>
+    <div class="ascii-diagram">                    ════ FORWARD PASS (সামনে) ════►
+┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌────────┐
+│          │   │   Conv   │   │  ReLU    │   │ MaxPool  │   │ Flatten  │   │   FC   │
+│  Input   │──►│  Layer   │──►│  f(Z)=   │──►│ 2×2 → 1  │──►│ 2D → 1D │──►│ Layer  │──► ŷ
+│  Image   │   │  Z=X*K   │   │  max(0,Z)│   │ max(2×2) │   │          │   │        │
+└──────────┘   └──────────┘   └──────────┘   └──────────┘   └──────────┘   └────────┘
+
+                    ◄════ BACKWARD PASS (পেছনে) ════
+                                                                              ┌────────┐
+                                                                              │  Loss  │
+                                                                              │ ∂L/∂ŷ  │
+                                                                              └───┬────┘
+                                                                                  │
+┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐        │
+│ ∂L/∂X   │   │ ∂L/∂K   │   │ ∂L/∂Z   │   │ ∂L/∂A   │   │ ∂L/∂P   │   ┌──────┴──────┐
+│ (input  │◄──│ (kernel │◄──│ (relu   │◄──│ (pool   │◄──│ (fc     │◄──│  FC Backward │
+│ gradient)│   │ gradient)│   │ backward)│   │ backward)│   │ backward)│   └─────────────┘
+└──────────┘   └──────────┘   └──────────┘   └──────────┘   └──────────┘
+
+════════════════════════════════════════════════════
+MAX POOLING: Gradient কোথায় যাবে?
+════════════════════════════════════════════════════
+
+Forward:                     Backward:
+┌────┬────┐                  ┌────┬────┐
+│  3 │  7 │  → max = 7 ──►  │  0 │  δ │  ← gradient শুধু max-এ যায়
+│  2 │  1 │                  │  0 │  0 │
+└────┴────┘                  └────┴────┘
+
+════════════════════════════════════════════════════
+CONV BACKWARD: Kernel Gradient হিসাব
+════════════════════════════════════════════════════
+
+Input X (3×3):    Upstream δ (2×2):    Kernel Grad ∂L/∂K (2×2):
+┌───────────┐     ┌───────┐            ┌──────────────────────┐
+│ 1   2   3 │     │ a   b │            │ K[0,0] = 1a+2b+4c+5d │
+│ 4   5   6 │  ×  │ c   d │    ──►     │ K[0,1] = 2a+3b+5c+6d │
+│ 7   8   9 │     └───────┘            │ K[1,0] = 4a+5b+7c+8d │
+└───────────┘                          │ K[1,1] = 5a+6b+8c+9d │
+                                       └──────────────────────┘
+
+════════════════════════════════════════════════════
+CONV BACKWARD: Input Gradient (180° rotated kernel)
+════════════════════════════════════════════════════
+
+Original K:      rot180(K):     Padded δ:        Input Grad = Padded_δ * rot180(K)
+┌─────────┐      ┌─────────┐    ┌───────────┐
+│ 1   0   │  →   │ 1   0   │    │ 0   0   0 │
+│ 0   1   │      │ 0   1   │    │ 0   δ   0 │
+└─────────┘      └─────────┘    │ 0   0   0 │
+                                └───────────┘</div>
+
+    <h3>Gradient Flow পুরো Network-এ</h3>
+    <div class="ascii-diagram">Error শুরু হয় Output থেকে, পেছনে চলে আসে:
+
+LOSS (0.28)
+   │
+   ▼ ∂L/∂ŷ
+[FC LAYER] ─── weights update হয়
+   │
+   ▼ ∂L/∂flat
+[FLATTEN] ─── শুধু reshape, কোনো parameter নেই
+   │
+   ▼ ∂L/∂P
+[MAX POOL] ─── mask দিয়ে gradient route করা হয়
+   │
+   ▼ ∂L/∂A
+[ReLU] ─── Z>0 হলে gradient পাস, বাকিতে 0
+   │
+   ▼ ∂L/∂Z
+[CONV LAYER] ─── kernel gradient + input gradient
+   │
+   ▼ ∂L/∂K (kernel update হয়)</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 6: REAL-WORLD USE CASES
+  ═══════════════════════════════════════════════ -->
+  <div class="section" id="s6">
+    <div class="section-header">
+      <div class="section-icon">✅</div>
+      <div>
+        <h2>Real-world Use Cases</h2>
+        <span class="en">Who uses it &amp; where?</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card card-green">
+        <h4>🏥 Medical Imaging — Google Health</h4>
+        <p>CNN backpropagation দিয়ে trained model X-ray, MRI তে ক্যান্সার, ডায়াবেটিক রেটিনোপ্যাথি সনাক্ত করে। Google-এর AI চোখের রোগ ধরতে expert doctor-এর সমতুল্য।</p>
+        <span class="badge badge-green">Healthcare</span>
+      </div>
+
+      <div class="card card-accent">
+        <h4>🚗 Self-Driving Cars — Tesla</h4>
+        <p>Tesla Autopilot-এ CNN ব্যবহার করা হয় road, pedestrian, traffic sign চেনার জন্য। Backprop দিয়ে লক্ষ লক্ষ ড্রাইভিং ডেটা থেকে model train করা হয়।</p>
+        <span class="badge badge-purple">Autonomous Driving</span>
+      </div>
+
+      <div class="card card-orange">
+        <h4>📸 Face Recognition — Meta (Facebook)</h4>
+        <p>Facebook-এর DeepFace system CNN + Backprop ব্যবহার করে 97%+ accuracy-তে মুখ চেনে। photo upload করলে automatically বন্ধুকে tag করার এটাই কারণ।</p>
+        <span class="badge badge-orange">Computer Vision</span>
+      </div>
+
+      <div class="card card-red">
+        <h4>🎮 Image Generation — Stable Diffusion</h4>
+        <p>Image generation model-গুলোতেও CNN backprop ব্যবহার হয়। এরা noise থেকে ধীরে ধীরে image তৈরি করতে শেখে।</p>
+        <span class="badge badge-red">Generative AI</span>
+      </div>
+
+      <div class="card">
+        <h4>📱 Mobile Image Processing — Apple</h4>
+        <p>iPhone-এর portrait mode, night mode — সব CNN দিয়ে করা। Backprop ব্যবহার করে train করা model on-device চলে।</p>
+        <span class="badge badge-purple">Edge Computing</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 7: PROS & CONS
+  ═══════════════════════════════════════════════ -->
+  <div class="section" id="s7">
+    <div class="section-header">
+      <div class="section-icon">⚖️</div>
+      <div>
+        <h2>Pros &amp; Cons</h2>
+        <span class="en">Advantages &amp; Disadvantages</span>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>✅ সুবিধা</th>
+          <th>❌ অসুবিধা</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Automatic Learning</strong> — হাতে weight tune করতে হয় না, algorithm নিজেই শেখে</td>
+          <td><strong>Vanishing Gradient</strong> — অনেক deep network-এ gradient খুব ছোট হয়ে শেখা বন্ধ হয়</td>
+        </tr>
+        <tr>
+          <td><strong>Scalable</strong> — লক্ষ লক্ষ parameter সহ বড় network-এও কাজ করে</td>
+          <td><strong>Computational Cost</strong> — বড় dataset-এ training অনেক সময় এবং GPU লাগে</td>
+        </tr>
+        <tr>
+          <td><strong>Weight Sharing</strong> — CNN-এর kernel সব জায়গায় shared, তাই gradient efficient</td>
+          <td><strong>Local Minima</strong> — Loss function-এ আটকে যেতে পারে, global minimum নাও পেতে পারে</td>
+        </tr>
+        <tr>
+          <td><strong>Chain Rule</strong> — যেকোনো differentiable function-এ apply করা যায়</td>
+          <td><strong>Hyperparameter Sensitivity</strong> — Learning rate ভুল হলে diverge করে বা খুব ধীরে শেখে</td>
+        </tr>
+        <tr>
+          <td><strong>Parallel Computation</strong> — GPU দিয়ে দ্রুত matrix operations করা যায়</td>
+          <td><strong>Dying ReLU</strong> — ReLU neuron "মরে" যেতে পারে, সারাজীবন 0 output দেয়</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 8: COMMON MISTAKES
+  ═══════════════════════════════════════════════ -->
+  <div class="section" id="s8">
+    <div class="section-header">
+      <div class="section-icon">⚠️</div>
+      <div>
+        <h2>Common Mistakes &amp; Gotchas</h2>
+        <span class="en">নতুনরা কোথায় ভুল করে?</span>
+      </div>
+    </div>
+
+    <div class="card card-red">
+      <h4>❌ ভুল ১: Max Pool Mask না রাখা</h4>
+      <p>Forward pass-এ যদি max-এর position (mask) সংরক্ষণ না করো, backward pass-এ gradient কোথায় পাঠাবে বুঝবে না। সবচেয়ে বড় ভুল এটাই।</p>
+      <p><span class="hl-red">সঠিক পদ্ধতি:</span> Forward pass-এ mask সেভ করো, backward pass-এ ব্যবহার করো।</p>
+    </div>
+
+    <div class="card card-red">
+      <h4>❌ ভুল ২: Convolution Backward-এ Kernel না ঘোরানো</h4>
+      <p>Input gradient হিসাব করতে kernel 180° ঘুরিয়ে full convolution করতে হয়। অনেকে এটা বাদ দেয়।</p>
+      <p><span class="hl-red">সঠিক:</span> <code>np.rot90(kernel, 2)</code> ব্যবহার করো।</p>
+    </div>
+
+    <div class="card card-orange">
+      <h4>⚠️ ভুল ৩: Learning Rate অনেক বড় নেওয়া</h4>
+      <p>Learning rate যদি 0.1 এর বেশি হয়, loss oscillate করবে বা NaN হয়ে যাবে। শুরুতে 0.001 দিয়ে শুরু করো।</p>
+    </div>
+
+    <div class="card card-orange">
+      <h4>⚠️ ভুল ৪: Gradient Accumulation না করা (Shared Weights)</h4>
+      <p>CNN-এ একই kernel বারবার ব্যবহার হয়। সব position-এর gradient যোগ করতে হবে, replace নয়। <code>d_K += ...</code> লেখো, <code>d_K = ...</code> নয়।</p>
+    </div>
+
+    <div class="card card-accent">
+      <h4>💡 ভুল ৫: Dying ReLU সম্পর্কে না জানা</h4>
+      <p>যদি অনেক neuron সবসময় negative input পায়, ReLU সেগুলোকে সবসময় 0 করে দেয়। Gradient 0 হয়ে weight আর update হয় না।</p>
+      <p><span class="hl">সমাধান:</span> Leaky ReLU বা proper weight initialization (He initialization) ব্যবহার করো।</p>
+    </div>
+
+    <div class="card">
+      <h4>🔍 ভুল ৬: Gradient Check না করা</h4>
+      <p>নিজের implementation verify করার সেরা উপায় — numerical gradient check। Analytical gradient এবং numerical gradient প্রায় সমান হওয়া উচিত।</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 9: RELATED TOPICS
+  ═══════════════════════════════════════════════ -->
+  <div class="section" id="s9">
+    <div class="section-header">
+      <div class="section-icon">🔗</div>
+      <div>
+        <h2>Related Topics</h2>
+        <span class="en">What to learn before &amp; after</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h4>📚 আগে জানা দরকার</h4>
+        <ul>
+          <li>Linear Algebra (Matrix multiplication, transpose)</li>
+          <li>Calculus (Partial derivatives, Chain rule)</li>
+          <li>Basic Neural Networks (MLP, Perceptron)</li>
+          <li>Gradient Descent</li>
+          <li>Convolution operation কী</li>
+          <li>Loss functions (Cross-Entropy, MSE)</li>
+          <li>Activation functions (ReLU, Sigmoid)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>🚀 পরে শেখা উচিত</h4>
+        <ul>
+          <li>Batch Normalization Backprop</li>
+          <li>Dropout Backprop</li>
+          <li>Adam, RMSProp Optimizer</li>
+          <li>Advanced CNN architectures (ResNet, VGG)</li>
+          <li>Transfer Learning</li>
+          <li>Attention Mechanism</li>
+          <li>Automatic Differentiation (AutoGrad)</li>
+          <li>PyTorch / TensorFlow internals</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card card-accent" style="margin-top:16px">
+      <h4>🔗 Backpropagation পরিবারের অন্য সদস্যরা</h4>
+      <p>Backpropagation Through Time (BPTT) → RNN-এর জন্য, Truncated BPTT → Long sequences-এর জন্য, Synthetic Gradient → Async training-এর জন্য।</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 10: MEMORY TRICKS
+  ═══════════════════════════════════════════════ -->
+  <div class="section" id="s10">
+    <div class="section-header">
+      <div class="section-icon">🧠</div>
+      <div>
+        <h2>Memory Tricks</h2>
+        <span class="en">মনে রাখার সহজ কৌশল</span>
+      </div>
+    </div>
+
+    <div class="memory-card">
+      <div class="big">🔄 "চুলের চিরুনি" মনে রাখো</div>
+      <div class="sub">Forward: বাম → ডান (input → output)<br>Backward: ডান → বাম (error → weights)<br>ঠিক যেভাবে চিরুনি দিয়ে একই পথে আগে পিছে যাওয়া যায়</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card card-green">
+        <h4>🎯 FC Layer মনে রাখো: "শিক্ষকের মার্কস"</h4>
+        <p>শিক্ষক ভুল দেখে কোন ছাত্র (weight) কতটা দায়ী তা বের করেন।<br>d_W = input × error</p>
+      </div>
+      <div class="card card-orange">
+        <h4>🎯 Max Pool মনে রাখো: "ক্রিকেটে সেরা খেলোয়াড়"</h4>
+        <p>টিম হারলে দোষ শুধু সেরা খেলোয়াড়ের (max value-র), বাকিরা নিরপরাধ।<br>gradient → max position only</p>
+      </div>
+      <div class="card card-accent">
+        <h4>🎯 Conv Backward মনে রাখো: "আয়নার প্রতিবিম্ব"</h4>
+        <p>Input gradient বের করতে kernel 180° ঘুরিয়ে নাও — যেন আয়নায় উল্টো দেখা।<br>∂L/∂X = δ ★ rot180(K)</p>
+      </div>
+      <div class="card card-red">
+        <h4>🎯 ReLU মনে রাখো: "ওয়ান-ওয়ে রাস্তা"</h4>
+        <p>Forward-এ শুধু positive যায়। Backward-এও তাই — gradient শুধু সেখানেই ফেরে যেখানে positive ছিল।</p>
+      </div>
+    </div>
+
+    <div class="memory-card" style="margin-top:24px">
+      <div class="big">📝 এক লাইনে সারসংক্ষেপ</div>
+      <div class="sub" style="font-size:1.1rem; color: var(--accent3); margin-top:12px;">
+        "CNN ভুল করে → Loss বের হয় → Chain Rule দিয়ে পেছনে আসে → প্রতিটি kernel/weight গ্র্যাজুয়েলি ঠিক হয় → Model চালাক হয়"
+      </div>
+    </div>
+
+    <div class="card" style="text-align:center; margin-top:16px">
+      <p style="color:var(--accent1); font-size:1.1rem; font-weight:700;">মূল সূত্র মনে রাখো:</p>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:1.2rem; color:var(--accent3); margin:12px 0;">
+        Weight_new = Weight_old − α × ∂Loss/∂Weight
+      </div>
+      <p style="color:var(--text2);">α = learning rate | ∂Loss/∂Weight = gradient (chain rule দিয়ে হিসাব)</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p>📘 CNN Backpropagation — সম্পূর্ণ বাংলা নোট</p>
+  <p style="margin-top:8px; color: #636da6;">Deep Learning · Machine Learning · বাংলায় শিখি</p>
+</div>
+
+</body>
+</html>

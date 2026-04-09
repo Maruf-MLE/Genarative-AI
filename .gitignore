@@ -6,3 +6,12 @@
 # Ignore virtual environment folders
 venv/
 .venv/
+myvenv/
+
+# Ignore video files
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.wmv
+*.webm
