@@ -24,15 +24,15 @@
 
 ## 🗺️ Learning Syllabus & Tracker
 
-> **টিপস:** প্রতিদিন এখান থেকে সিরিয়ালি ২-৩ টি টপিক প্রম্পট করে এআই-কে দিন। এআই নোট দিলে সেটি সেভ করে রাখুন এবং নিচের চেকলিস্টে (`[x]`) টিক চিহ্ন দিন। 
+> **টিপস:** প্রতিদিন এখান থেকে সিরিয়ালি ২-৩ টি টপিক প্রম্পট করে এআই-কে দিন। এআই নোট দিলে সেটি সেভ করে রাখুন এবং নিচের চেকলিস্টে (`[x]`) টিক চিহ্ন দিন। 
 
 ### 🟢 পর্ব ১: মেশিন লার্নিং (Machine Learning Core)
-*এই টপিকগুলো সাধারণত খুব বেশি বড় নয়, তাই একটি করে দিলে এআই সহজেই ভালো নোট বানাতে পারবে।*
+*এই টপিকগুলো সাধারণত খুব বেশি বড় নয়, তাই একটি করে দিলে এআই সহজেই ভালো নোট বানাতে পারবে।*
 
 - [ ] **১. Introduction to Machine Learning:** Definition, AI vs ML vs DL differences, and Real-world use cases.
 - [ ] **২. Types of Machine Learning:** Supervised, Unsupervised, and Reinforcement Learning (Intuition with examples).
 - [x] **৩. Data Preprocessing Techniques:** Handling missing values, Encoding categorical data, and Feature Scaling (Standardization vs Normalization). 👉 [নোট পড়ুন](./Data_Preprocessing/Data_Preprocessing.md)
-- [x] **৪. Linear Regression:** Core intuition, Best fit line, and Cost Function (Mean Squared Error). 👉 [নোট পড়ুন](./Linear_Regression.md)
+- [x] **৪. Linear Regression:** Core intuition, Best fit line, and Cost Function (Mean Squared Error). 👉 [নোট পড়ুন](./Linear_Regression.md)
 - [x] **৫. Gradient Descent Algorithm:** Working mechanism, Learning Rate intuition, and updating weights. 👉 [নোট পড়ুন](./Gradient_Descent/Gradient_Descent.md)
 - [x] **৬. Logistic Regression:** Why not linear regression for classification? Sigmoid Function intuition and Decision Boundary. 👉 [নোট পড়ুন](./Logistic_Regression/Logistic_Regression.md)
 - [ ] **৭. Decision Trees:** Intuition behind splitting data, Entropy, and Information Gain.
@@ -44,7 +44,7 @@
 ---
 
 ### 🟡 পর্ব ২: ডিপ লার্নিং (Deep Learning Foundations - ANN)
-*ANN (Artificial Neural Network) বোঝার জন্য এটিকে ৩টি ভাগে ভাগ করা হয়েছে।*
+*ANN (Artificial Neural Network) বোঝার জন্য এটিকে ৩টি ভাগে ভাগ করা হয়েছে।*
 
 - [x] **১২. Introduction to ANN:** Biological Neuron vs Artificial Perceptron, Input layer, Hidden layers, Output layer, and Forward Propagation. 👉 [নোট পড়ুন](./ANN_Introduction/ANN_Introduction.md)
 - [x] **১৩. Activation Functions in Neural Networks:** Why do we need non-linearity? Detailed intuition of Sigmoid, ReLU, Tanh, and Softmax functions. 👉 [নোট পড়ুন](./Activation_Functions/Activation_Functions.md)
@@ -54,7 +54,7 @@
 ---
 
 ### 🔵 পর্ব ৩: ইমেজ প্রসেসিং (Convolutional Neural Networks - CNN)
-*CNN অনেক বড় বিষয়, তাই এটিকেও ৩টি ভাগে ভাগ করা হয়েছে।*
+*CNN অনেক বড় বিষয়, তাই এটিকেও ৩টি ভাগে ভাগ করা হয়েছে।*
 
 - [x] **১৫. Introduction to CNN & Image Processing:** Why standard ANN fails on images? Concept of Pixels, Channels (RGB), and Image Tensors. 👉 [নোট পড়ুন](./CNN_Introduction/CNN_Introduction.md)
 - [x] **১৬. The Convolution Operation:** How Filters/Kernels work, Stride, Padding, and Feature Map generation. 👉 [নোট পড়ুন](./Convolution_Operation/Convolution_Operation.md)
@@ -63,23 +63,23 @@
 
 ---
 
-### 🟣 পর্ব ৪: টেক্সট এবং সিকোয়েন্স ডেটা (Recurrent Neural Networks - RNN)
-*RNN এবং এর বিভিন্ন ভ্যারিয়েন্টগুলো ভালোভাবে বোঝার জন্য ৩টি ভাগে ভাগ করা হয়েছে।*
+### 🟣 পর্ব ৪: টেক্সট এবং সিকোয়েন্স ডেটা (Recurrent Neural Networks - RNN)
+*RNN এবং এর বিভিন্ন ভ্যারিয়েন্টগুলো ভালোভাবে বোঝার জন্য ৩টি ভাগে ভাগ করা হয়েছে।*
 
-- [ ] **১৮. Introduction to Sequence Data and Standard RNN:** Why CNN/ANN cannot handle sequence data (like text or time)? Concept of Hidden State and Unrolling RNN.
-- [ ] **১৯. The Vanishing Gradient Problem in Deep Networks:** What is the Vanishing Gradient problem and why does standard RNN fail to remember long sequences?
-- [ ] **২০. LSTM (Long Short-Term Memory) & GRU:** How LSTM solves the vanishing gradient using Gates (Forget, Input, and Output gates). Brief comparison with GRU.
+- [x] **১৮. Introduction to Sequence Data and Standard RNN:** Why CNN/ANN cannot handle sequence data (like text or time)? Concept of Hidden State and Unrolling RNN. 👉 [নোট পড়ুন](./RNN_Introduction/RNN_Introduction.md)
+- [x] **১৯. The Vanishing Gradient Problem in Deep Networks:** What is the Vanishing Gradient problem and why does standard RNN fail to remember long sequences? 👉 [নোট পড়ুন](./Vanishing_Gradient_RNN/Vanishing_Gradient_RNN.md)
+- [x] **২০. LSTM (Long Short-Term Memory) & GRU:** How LSTM solves the vanishing gradient using Gates (Forget, Input, and Output gates). Brief comparison with GRU. 👉 [নোট পড়ুন](./LSTM_GRU/LSTM_GRU.md)
 
 ---
 
 ### 🔴 পর্ব ৫: ট্রান্সফরমার এবং আধুনিক এলএলএম (Transformers & LLMs)
-*যেহেতু ট্রান্সফরমার আর্কিটেকচার সবচেয়ে জটিল (ChatGPT এর মূল ভিত্তি), তাই একে সুনির্দিষ্ট ৫টি ধাপে ভাগ করা হয়েছে।*
+*যেহেতু ট্রান্সফরমার আর্কিটেকচার সবচেয়ে জটিল (ChatGPT এর মূল ভিত্তি), তাই একে সুনির্দিষ্ট ৫টি ধাপে ভাগ করা হয়েছে।*
 
-- [ ] **২১. Sequence-to-Sequence (Seq2Seq) Models & The Bottleneck Problem:** Traditional Encoder-Decoder architectures and why context vectors struggle with long sentences.
-- [ ] **২২. The Attention Mechanism (Basics):** What is Attention? How it helps the decoder focus on relevant parts of the input sequence instead of a single context vector.
-- [ ] **২৩. Self-Attention in Transformers:** Query, Key, and Value (Q, K, V) vectors intuition. How words in a sentence relate to each other.
-- [ ] **২৪. Multi-Head Attention & Positional Encoding:** Why single attention isn't enough? How Positional Encoding feeds sequence order into models that don't have recurrence.
-- [ ] **২৫. The Full Transformer Architecture:** Everything put together (Encoder block, Decoder block, Add & Norm, and Feed Forward networks).
+- [x] **২১. Sequence-to-Sequence (Seq2Seq) Models & The Bottleneck Problem:** Traditional Encoder-Decoder architectures and why context vectors struggle with long sentences. 👉 [নোট পড়ুন](./Seq2Seq_Bottleneck/Seq2Seq_Bottleneck.md)
+- [x] **২২. The Attention Mechanism (Basics):** What is Attention? How it helps the decoder focus on relevant parts of the input sequence instead of a single context vector. 👉 [নোট পড়ুন](./Attention_Mechanism/Attention_Mechanism.md)
+- [x] **২৩. Self-Attention in Transformers:** Query, Key, and Value (Q, K, V) vectors intuition. How words in a sentence relate to each other. 👉 [নোট পড়ুন](./Self_Attention_QKV/Self_Attention_QKV.md)
+- [x] **২৪. Multi-Head Attention & Positional Encoding:** Why single attention isn't enough? How Positional Encoding feeds sequence order into models that don't have recurrence. 👉 [নোট পড়ুন](./Multi_Head_Attention_PE/Multi_Head_Attention_PE.md)
+- [x] **২৫. The Full Transformer Architecture:** Everything put together (Encoder block, Decoder block, Add & Norm, and Feed Forward networks). 👉 [নোট পড়ুন](./Full_Transformer_Architecture/Full_Transformer_Architecture.md)
 
 ---
 
@@ -95,5 +95,4 @@
 
 ---
 
-*🔄 নিয়মিত আপডেট হচ্ছে | 📅 শেষ আপডেট: ২০২৬-০৪-০৯ (DL Performance Improvement যোগ হয়েছে)*
-
+*🔄 নিয়মিত আপডেট হচ্ছে | 📅 শেষ আপডেট: ২০২৬-০৪-১১ (Full Transformer Architecture নোট যোগ হয়েছে — Transformer সিরিজ সম্পূর্ণ! 🎉)*
