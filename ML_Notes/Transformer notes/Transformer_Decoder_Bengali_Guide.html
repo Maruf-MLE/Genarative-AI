@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformer Decoder Architecture — সম্পূর্ণ টেকনিক্যাল গাইড</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #111827;
+    --bg-card: #161d2e;
+    --bg-highlight: #1a2540;
+    --accent-blue: #3b82f6;
+    --accent-cyan: #06b6d4;
+    --accent-purple: #8b5cf6;
+    --accent-gold: #f59e0b;
+    --accent-green: #10b981;
+    --accent-red: #ef4444;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border: #1e2d4a;
+    --border-bright: #2d4a7a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans Bengali', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.8;
+    font-size: 16px;
+  }
+
+  /* ── COVER PAGE ── */
+  .cover {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0e1a 0%, #0d1830 40%, #0a1628 70%, #06101f 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 40%, rgba(59,130,246,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 60%, rgba(139,92,246,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .cover-badge {
+    display: inline-block;
+    background: linear-gradient(90deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2));
+    border: 1px solid rgba(59,130,246,0.4);
+    color: var(--accent-cyan);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 8px 24px;
+    border-radius: 50px;
+    margin-bottom: 40px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .cover h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 900;
+    line-height: 1.15;
+    background: linear-gradient(135deg, #e2e8f0 0%, #93c5fd 40%, #c4b5fd 80%, #e2e8f0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 24px;
+    max-width: 900px;
+  }
+
+  .cover-subtitle {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+    line-height: 1.9;
+    margin-bottom: 50px;
+  }
+
+  .cover-meta {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .meta-item {
+    text-align: center;
+  }
+
+  .meta-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .meta-value {
+    font-size: 1.1rem;
+    color: var(--accent-blue);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  .cover-divider {
+    width: 100px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+    margin: 40px auto;
+  }
+
+  /* ── GRID LAYOUT ── */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    padding: 80px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 48px;
+  }
+
+  .section-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent-cyan);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding-top: 6px;
+    white-space: nowrap;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+
+  .section-title span {
+    color: var(--accent-blue);
+  }
+
+  .section-icon {
+    font-size: 2rem;
+    margin-right: 12px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+  }
+
+  .card-blue::before { background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)); }
+  .card-purple::before { background: linear-gradient(90deg, var(--accent-purple), #ec4899); }
+  .card-gold::before { background: linear-gradient(90deg, var(--accent-gold), #f97316); }
+  .card-green::before { background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan)); }
+
+  .card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ── HIGHLIGHT BOX ── */
+  .highlight-box {
+    background: var(--bg-highlight);
+    border-left: 4px solid var(--accent-blue);
+    border-radius: 0 12px 12px 0;
+    padding: 24px 28px;
+    margin: 24px 0;
+  }
+
+  .highlight-box.gold { border-left-color: var(--accent-gold); }
+  .highlight-box.green { border-left-color: var(--accent-green); }
+  .highlight-box.purple { border-left-color: var(--accent-purple); }
+  .highlight-box.red { border-left-color: var(--accent-red); }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #e2e8f0;
+    overflow-x: auto;
+    margin: 20px 0;
+    white-space: pre;
+  }
+
+  .code-block .comment { color: #6e7681; }
+  .code-block .keyword { color: #ff7b72; }
+  .code-block .string { color: #a5d6ff; }
+  .code-block .number { color: #f2cc60; }
+  .code-block .label { color: #7ee787; }
+  .code-block .arrow { color: #79c0ff; }
+
+  /* ── ASCII DIAGRAM ── */
+  .ascii-diagram {
+    background: #060a10;
+    border: 1px solid var(--border-bright);
+    border-radius: 12px;
+    padding: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #7dd3fc;
+    overflow-x: auto;
+    margin: 24px 0;
+    white-space: pre;
+  }
+
+  /* ── PROCESS STEP ── */
+  .process-steps {
+    counter-reset: step;
+  }
+
+  .step {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 32px;
+    position: relative;
+  }
+
+  .step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 22px;
+    top: 52px;
+    bottom: -12px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--accent-blue), transparent);
+  }
+
+  .step-number {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 14px;
+    color: white;
+    counter-increment: step;
+  }
+
+  .step-content {
+    flex: 1;
+    padding-top: 8px;
+  }
+
+  .step-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    margin-bottom: 8px;
+  }
+
+  /* ── TABLE ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-size: 14px;
+  }
+
+  .data-table th {
+    background: var(--bg-highlight);
+    color: var(--accent-cyan);
+    font-weight: 600;
+    padding: 14px 18px;
+    text-align: left;
+    border-bottom: 2px solid var(--accent-blue);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .data-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+
+  .data-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+  .data-table tr:hover td { background: rgba(59,130,246,0.05); }
+
+  /* ── BADGE / TAG ── */
+  .tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    margin: 3px;
+  }
+
+  .tag-blue { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+  .tag-purple { background: rgba(139,92,246,0.15); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.3); }
+  .tag-green { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+  .tag-gold { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+  .tag-red { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+
+  /* ── FORMULA ── */
+  .formula {
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(59,130,246,0.25);
+    border-radius: 10px;
+    padding: 16px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: #bfdbfe;
+    text-align: center;
+    margin: 16px 0;
+  }
+
+  /* ── TWO COLUMN ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin: 24px 0;
+  }
+
+  @media (max-width: 768px) {
+    .two-col { grid-template-columns: 1fr; }
+    .container { padding: 0 20px; }
+    .section { padding: 50px 0; }
+  }
+
+  /* ── INLINE HIGHLIGHT ── */
+  .hl { color: var(--accent-cyan); font-weight: 600; }
+  .hl-gold { color: var(--accent-gold); font-weight: 600; }
+  .hl-green { color: var(--accent-green); font-weight: 600; }
+  .hl-purple { color: var(--accent-purple); font-weight: 600; }
+
+  /* ── FLOW ARROW ── */
+  .flow-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin: 32px 0;
+  }
+
+  .flow-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 32px;
+    text-align: center;
+    min-width: 280px;
+    position: relative;
+  }
+
+  .flow-box.highlight {
+    border-color: var(--accent-blue);
+    background: rgba(59,130,246,0.08);
+  }
+
+  .flow-box.gold-box {
+    border-color: var(--accent-gold);
+    background: rgba(245,158,11,0.06);
+  }
+
+  .flow-label {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .flow-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .flow-arrow {
+    font-size: 1.5rem;
+    color: var(--accent-blue);
+    padding: 6px 0;
+    line-height: 1;
+  }
+
+  /* ── CALLOUT ── */
+  .callout {
+    background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(139,92,246,0.04));
+    border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 14px;
+    padding: 28px 32px;
+    margin: 32px 0;
+  }
+
+  .callout-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent-gold);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    margin: 60px 0 0;
+  }
+
+  .toc-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent-cyan);
+    margin-bottom: 28px;
+  }
+
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+  }
+
+  .toc-item:hover { color: var(--accent-blue); }
+  .toc-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 30px;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    padding: 48px 40px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-top: 80px;
+  }
+
+  /* ── P TEXT ── */
+  p { margin-bottom: 16px; color: var(--text-primary); }
+  ul, ol { padding-left: 24px; margin-bottom: 16px; }
+  li { margin-bottom: 8px; }
+
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    margin: 28px 0 12px;
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin: 20px 0 10px;
+  }
+
+  strong { color: var(--accent-cyan); }
+  em { color: var(--accent-gold); font-style: normal; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════ COVER ════════════════════════════ -->
+<div class="cover">
+  <div class="cover-badge">Transformer Architecture Series · Video 13</div>
+  <h1>Transformer Decoder Architecture</h1>
+  <p class="cover-subtitle">
+    Training Phase থেকে শুরু করে Output পর্যন্ত — Decoder-এর সম্পূর্ণ অভ্যন্তরীণ কার্যপ্রণালীর বাংলায় বিস্তারিত টেকনিক্যাল গাইড
+  </p>
+  <div class="cover-divider"></div>
+  <div class="cover-meta">
+    <div class="meta-item">
+      <div class="meta-label">বিষয়</div>
+      <div class="meta-value">Decoder Architecture</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Focus</div>
+      <div class="meta-value">Training Process</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">উদাহরণ</div>
+      <div class="meta-value">English → Hindi</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Blocks</div>
+      <div class="meta-value">6 Decoder Layers</div>
+    </div>
+  </div>
+  <div class="toc">
+    <div class="toc-title">বিষয়সূচী — Table of Contents</div>
+    <a class="toc-item" href="#intro"><span class="toc-num">01</span> সহজ ভাষায় পরিচিতি (Intuition)</a>
+    <a class="toc-item" href="#overview"><span class="toc-num">02</span> High-Level Architecture Overview</a>
+    <a class="toc-item" href="#input"><span class="toc-num">03</span> Input Processing — ৪টি ধাপ</a>
+    <a class="toc-item" href="#decoder-block"><span class="toc-num">04</span> Single Decoder Block — ভেতরের কাজ</a>
+    <a class="toc-item" href="#masked"><span class="toc-num">05</span> Masked Multi-Head Attention</a>
+    <a class="toc-item" href="#cross"><span class="toc-num">06</span> Cross Attention (Encoder-Decoder)</a>
+    <a class="toc-item" href="#ffnn"><span class="toc-num">07</span> Feed Forward Neural Network</a>
+    <a class="toc-item" href="#stacking"><span class="toc-num">08</span> 6 Blocks Stacking — পুরো Decoder</a>
+    <a class="toc-item" href="#output"><span class="toc-num">09</span> Output Block — Linear + Softmax</a>
+    <a class="toc-item" href="#diagram"><span class="toc-num">10</span> Complete Architecture Diagram</a>
+  </div>
+</div>
+
+<!-- ════════════════════════════ SECTION 1: INTUITION ════════════════════════════ -->
+<div class="container">
+  <div class="section" id="intro">
+    <div class="section-header">
+      <div class="section-number">01 // INTUITION</div>
+      <div>
+        <div class="section-title">🎯 সহজ ভাষায় পরিচিতি</div>
+      </div>
+    </div>
+
+    <div class="card card-blue">
+      <div class="card-title">🏠 বাস্তব জীবনের উদাহরণ — রান্নাঘরের সাথে তুলনা</div>
+      <p>কল্পনা করো তুমি একটি বড় রেস্তোরাঁয় কাজ করছ। রেস্তোরাঁর দুটো প্রধান অংশ আছে:</p>
+      <ul>
+        <li><strong>Encoder = রেসিপি বিশ্লেষক</strong> — কাস্টমারের অর্ডার (ইংরেজি মেনু) পড়ে বুঝে নেয় এবং শেফের জন্য বিস্তারিত নোট তৈরি করে।</li>
+        <li><strong>Decoder = শেফ</strong> — সেই নোট দেখে একটু একটু করে রান্না করে প্লেটে পরিবেশন করে (হিন্দি অনুবাদ)।</li>
+      </ul>
+      <p>Encoder যতক্ষণ পর্যন্ত তার কাজ শেষ না করে, Decoder কাজ শুরু করে না। Encoder সম্পূর্ণ "বোঝার কাজ" করে ফেলে, তারপর Decoder সেই বোঝার উপর ভিত্তি করে আউটপুট তৈরি করে।</p>
+    </div>
+
+    <div class="two-col">
+      <div class="card card-purple">
+        <div class="card-title">🤔 কোন সমস্যা সমাধান করে?</div>
+        <ul>
+          <li>একটি ভাষা থেকে অন্য ভাষায় অনুবাদ করা</li>
+          <li>Source sentence-এর context বুঝে Target sentence তৈরি করা</li>
+          <li>প্রতিটি শব্দ তৈরির সময় আগের শব্দগুলো মনে রাখা</li>
+          <li>Source ও Target-এর মধ্যে সঠিক সম্পর্ক স্থাপন করা</li>
+        </ul>
+      </div>
+      <div class="card card-green">
+        <div class="card-title">⚙️ Training vs Inference</div>
+        <p><strong>এই গাইড Training-এর উপর focus করেছে।</strong></p>
+        <p>Training-এ: সম্পূর্ণ output sentence একসাথে দেওয়া হয় (Non-autoregressive)</p>
+        <p>Inference-এ: একটি একটি করে token generate হয় (Autoregressive)</p>
+        <p>আর্কিটেকচার একই, কিন্তু কাজ করার পদ্ধতি আলাদা।</p>
+      </div>
+    </div>
+
+    <div class="highlight-box gold">
+      <strong>🎯 মূল উদাহরণ যা সারা গাইডে ব্যবহার হবে:</strong>
+      <br><br>
+      <span class="tag tag-blue">Input (English)</span> → <strong>"We are friends"</strong>
+      <br>
+      <span class="tag tag-green">Output (Hindi)</span> → <strong>"हम दोस्त हैं"</strong> (হম দোস্ত হ্যাঁ)
+      <br><br>
+      Encoder ইংরেজি সেন্টেন্স প্রসেস করবে। Decoder হিন্দি সেন্টেন্স তৈরি করবে।
+    </div>
+  </div>
+
+  <!-- ════════════════════════════ SECTION 2: OVERVIEW ════════════════════════════ -->
+  <div class="section" id="overview">
+    <div class="section-header">
+      <div class="section-number">02 // OVERVIEW</div>
+      <div class="section-title">📖 High-Level Architecture Overview</div>
+    </div>
+
+    <p>Transformer কে সবচেয়ে সহজভাবে বুঝতে হলে — এটি একটি বড় বাক্স, যার ভেতরে দুটো ছোট বাক্স আছে:</p>
+
+    <div class="ascii-diagram">
+┌─────────────────────────────────────────────────────┐
+│                   TRANSFORMER                        │
+│                                                     │
+│   ┌──────────────┐        ┌──────────────────┐     │
+│   │              │        │                  │     │
+│   │   ENCODER    │───────▶│    DECODER       │     │
+│   │              │        │                  │     │
+│   │ (Input কে   │        │ (Output তৈরি    │     │
+│   │  বোঝে)      │        │  করে)            │     │
+│   │              │        │                  │     │
+│   └──────────────┘        └──────────────────┘     │
+│                                                     │
+└─────────────────────────────────────────────────────┘</div>
+
+    <h3>Encoder ও Decoder — প্রতিটি কতটি Block দিয়ে তৈরি?</h3>
+    <p>Original Transformer Paper অনুযায়ী, Encoder এবং Decoder উভয়ই <em>৬টি Block</em> দিয়ে তৈরি।</p>
+
+    <div class="ascii-diagram">
+ENCODER = 6টি Encoder Block
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+┌──────────┐ ┌──────────┐       ┌──────────┐
+│ Block 1  │→│ Block 2  │→ ... →│ Block 6  │→ Output
+└──────────┘ └──────────┘       └──────────┘
+
+DECODER = 6টি Decoder Block
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+┌──────────┐ ┌──────────┐       ┌──────────┐
+│ Block 1  │→│ Block 2  │→ ... →│ Block 6  │→ Output Block
+└──────────┘ └──────────┘       └──────────┘</div>
+
+    <div class="two-col">
+      <div class="card card-blue">
+        <div class="card-title">Encoder Block-এ কী থাকে? (Revision)</div>
+        <ul>
+          <li><span class="tag tag-blue">Self Attention</span></li>
+          <li><span class="tag tag-blue">Feed Forward Neural Network</span></li>
+        </ul>
+        <p style="margin-top:12px; color: var(--text-secondary); font-size: 14px;">মোট ২টি Sub-block</p>
+      </div>
+      <div class="card card-purple">
+        <div class="card-title">Decoder Block-এ কী থাকে? (নতুন)</div>
+        <ul>
+          <li><span class="tag tag-purple">Masked Self Attention</span></li>
+          <li><span class="tag tag-gold">Cross Attention</span></li>
+          <li><span class="tag tag-blue">Feed Forward Neural Network</span></li>
+        </ul>
+        <p style="margin-top:12px; color: var(--text-secondary); font-size: 14px;">মোট ৩টি Sub-block</p>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">💡 গুরুত্বপূর্ণ তথ্য — iPhone উদাহরণ</div>
+      <p>সব ৬টি Decoder Block-এর <strong>Architecture একেবারে কপি-পেস্ট</strong> — ঠিক যেমন iPhone 15-এর সব ফোনের ডিজাইন একই, কিন্তু ভেতরে install করা apps আলাদা। এভাবে প্রতিটি Block-এর <strong>Parameters (Weights & Biases)</strong> আলাদা হয়, কিন্তু Structure সম্পূর্ণ একই।</p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════ SECTION 3: INPUT PROCESSING ════════════════════════════ -->
+  <div class="section" id="input">
+    <div class="section-header">
+      <div class="section-number">03 // INPUT PROCESSING</div>
+      <div class="section-title">📥 Input Block — ৪টি ধাপে প্রস্তুতি</div>
+    </div>
+
+    <p>Decoder-এ কোনো data পাঠানোর আগে সেই data কে প্রস্তুত করতে হয়। Output sentence (হিন্দি) কে ৪টি ধাপে process করে Decoder-এ পাঠানোর উপযুক্ত করা হয়।</p>
+
+    <div class="highlight-box">
+      <strong>আমাদের হিন্দি সেন্টেন্স:</strong> "हम दोस्त हैं" (হম দোস্ত হ্যাঁ)
+      <br>এই সেন্টেন্সটাকে ধাপে ধাপে process করা হবে।
+    </div>
+
+    <div class="process-steps">
+      <!-- Step 1 -->
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <div class="step-title">Right Shifting (শিফটিং)</div>
+          <p>সেন্টেন্সের শুরুতে একটি বিশেষ <span class="hl">&lt;START&gt;</span> token যোগ করা হয়। এই token training process শুরু হওয়ার সংকেত দেয় — একটি flag-এর মতো কাজ করে।</p>
+          <div class="formula">"हम दोस्त हैं" → "&lt;START&gt; हम दोस्त हैं"</div>
+          <p style="color: var(--text-secondary); font-size: 14px;">এই কারণেই একে "Right Shift" বলা হয় — পুরো sentence একটু ডানদিকে সরে যায়, বামে START token বসে।</p>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <div class="step-title">Tokenization (টোকেনাইজেশন)</div>
+          <p>সেন্টেন্সকে ছোট ছোট অংশে ভাগ করা হয়। আমরা সহজ পদ্ধতি ব্যবহার করছি — প্রতিটি শব্দ একটি token।</p>
+          <div class="ascii-diagram">"&lt;START&gt; हम दोस्त हैं"
+          ↓
+Token 1: &lt;START&gt;
+Token 2: हम
+Token 3: दोस्त
+Token 4: हैं
+          
+মোট = ৪টি Token</div>
+          <p style="color: var(--text-secondary); font-size: 14px;">Tokenization technique বিভিন্ন হতে পারে — word-level, byte-pair encoding (BPE), subword ইত্যাদি। এখানে word-level ব্যবহার করা হচ্ছে।</p>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <div class="step-title">Embedding (এম্বেডিং লেয়ার)</div>
+          <p>Machine শব্দ বোঝে না, সংখ্যা বোঝে। Embedding layer প্রতিটি token কে একটি <span class="hl">512-dimensional vector</span>-এ রূপান্তর করে।</p>
+          <div class="ascii-diagram">&lt;START&gt; → e1 [v₁, v₂, v₃, ..., v₅₁₂]  ← 512টি সংখ্যা
+हम      → e2 [v₁, v₂, v₃, ..., v₅₁₂]  ← 512টি সংখ্যা
+दोस्त   → e3 [v₁, v₂, v₃, ..., v₅₁₂]  ← 512টি সংখ্যা
+हैं     → e4 [v₁, v₂, v₃, ..., v₅₁₂]  ← 512টি সংখ্যা</div>
+          <p style="color: var(--text-secondary); font-size: 14px;">Original paper-এ প্রতিটি vector ৫১২ dimensional। এই vectors গুলো trainable — training-এর সময় এগুলো optimize হয়।</p>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step">
+        <div class="step-number">4</div>
+        <div class="step-content">
+          <div class="step-title">Positional Encoding (অবস্থান এনকোডিং)</div>
+          <p>Embedding vector কোন শব্দটি কোথায় ছিল সে তথ্য রাখে না। "হম দোস্ত হ্যাঁ" আর "দোস্ত হম হ্যাঁ" — দুটো ভিন্ন অর্থ, কিন্তু embedding দেখে বোঝার উপায় নেই। Positional Encoding এই সমস্যা সমাধান করে।</p>
+          <div class="ascii-diagram">প্রতিটি Position-এর জন্য আলাদা vector তৈরি হয়:
+
+Position 1: p1 [512-dimensional]
+Position 2: p2 [512-dimensional]
+Position 3: p3 [512-dimensional]
+Position 4: p4 [512-dimensional]
+
+তারপর Addition:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+e1 + p1 = x1  (START-এর final vector)
+e2 + p2 = x2  (हम-এর final vector)
+e3 + p3 = x3  (दोस्त-এর final vector)
+e4 + p4 = x4  (हैं-এর final vector)</div>
+          <p>এই <span class="hl">x1, x2, x3, x4</span> — এই ৪টি vector-ই Decoder-এর First Block-এ পাঠানো হবে।</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-gold">
+      <div class="card-title">📊 Input Processing — সারসংক্ষেপ</div>
+      <table class="data-table">
+        <tr>
+          <th>ধাপ</th>
+          <th>Operation</th>
+          <th>Input</th>
+          <th>Output</th>
+        </tr>
+        <tr>
+          <td><span class="tag tag-gold">১</span></td>
+          <td>Right Shifting</td>
+          <td>হিন্দি sentence</td>
+          <td>&lt;START&gt; + sentence</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-gold">২</span></td>
+          <td>Tokenization</td>
+          <td>Complete string</td>
+          <td>4টি individual token</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-gold">৩</span></td>
+          <td>Embedding</td>
+          <td>Tokens (words)</td>
+          <td>4 × 512-dim vectors (e1..e4)</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-gold">৪</span></td>
+          <td>Positional Encoding</td>
+          <td>e1..e4 + p1..p4</td>
+          <td>Final vectors x1..x4</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════ SECTION 4: DECODER BLOCK ════════════════════════════ -->
+  <div class="section" id="decoder-block">
+    <div class="section-header">
+      <div class="section-number">04 // DECODER BLOCK</div>
+      <div class="section-title">⚙️ Single Decoder Block — ভেতরের সম্পূর্ণ প্রক্রিয়া</div>
+    </div>
+
+    <p>এখন আমরা Decoder-এর সবচেয়ে গুরুত্বপূর্ণ অংশে আসছি। x1, x2, x3, x4 vector গুলো First Decoder Block-এ ঢোকার পরে কী হয়?</p>
+
+    <div class="flow-container">
+      <div class="flow-box gold-box">
+        <div class="flow-label">Input</div>
+        <div class="flow-text">x1, x2, x3, x4 (4 × 512-dim)</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box highlight">
+        <div class="flow-label">Sub-block 1</div>
+        <div class="flow-text">🎭 Masked Multi-Head Self Attention</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box">
+        <div class="flow-label">Normalization</div>
+        <div class="flow-text">Add & Norm (Residual Connection)</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box highlight">
+        <div class="flow-label">Sub-block 2</div>
+        <div class="flow-text">🔗 Cross Attention (Encoder-Decoder)</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box">
+        <div class="flow-label">Normalization</div>
+        <div class="flow-text">Add & Norm (Residual Connection)</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box highlight">
+        <div class="flow-label">Sub-block 3</div>
+        <div class="flow-text">🧠 Feed Forward Neural Network</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box">
+        <div class="flow-label">Normalization</div>
+        <div class="flow-text">Add & Norm (Residual Connection)</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box gold-box">
+        <div class="flow-label">Output → Next Block</div>
+        <div class="flow-text">y1, y2, y3, y4 (4 × 512-dim)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════ SECTION 5: MASKED ATTENTION ════════════════════════════ -->
+  <div class="section" id="masked">
+    <div class="section-header">
+      <div class="section-number">05 // MASKED SELF ATTENTION</div>
+      <div class="section-title">🎭 Masked Multi-Head Self Attention</div>
+    </div>
+
+    <p>এই block Normal Multi-Head Self Attention-এর মতোই কাজ করে, একটাই বড় পার্থক্য — এখানে <span class="hl">Masking</span> implement করা হয়।</p>
+
+    <h3>Masking কেন দরকার?</h3>
+
+    <div class="callout">
+      <div class="callout-title">🧠 মূল ধারণা</div>
+      <p>Training-এর সময় আমরা চাই Decoder যেন ভবিষ্যতের শব্দ দেখে "cheating" না করে। অর্থাৎ, "হম" শব্দ predict করার সময় Decoder যেন শুধু "&lt;START&gt;" দেখতে পারে, "দোস্ত" বা "হ্যাঁ" দেখতে না পারে।</p>
+    </div>
+
+    <h3>Masking কীভাবে কাজ করে?</h3>
+
+    <div class="ascii-diagram">প্রতিটি Token-এর Contextual Embedding তৈরির সময়:
+
+z1 তৈরি করতে:  শুধু &lt;START&gt; দেখতে পাবে
+                × हम, × दोस्त, × हैं — masked!
+
+z2 তৈরি করতে:  &lt;START&gt; + हम দেখতে পাবে  
+                × दोस्त, × हैं — masked!
+
+z3 তৈরি করতে:  &lt;START&gt; + हम + दोस्त দেখতে পাবে
+                × हैं — masked!
+
+z4 তৈরি করতে:  &lt;START&gt; + हम + दोस्त + हैं — সব দেখতে পাবে
+                (এটাই শেষ token, কিছু mask করা হয় না)
+
+সরল উপস্থাপনা (Attention Matrix):
+         START  हम  दोस्त  हैं
+START  [  ✓     ✗     ✗     ✗  ]
+हम     [  ✓     ✓     ✗     ✗  ]
+दोस्त  [  ✓     ✓     ✓     ✗  ]
+हैं    [  ✓     ✓     ✓     ✓  ]</div>
+
+    <h3>Output কী আসে?</h3>
+    <p>প্রতিটি Input vector (x) এর জন্য একটি Contextual Embedding (z) তৈরি হয়:</p>
+    <div class="formula">x1 → z1 &nbsp;&nbsp; x2 → z2 &nbsp;&nbsp; x3 → z3 &nbsp;&nbsp; x4 → z4</div>
+    <p>এই z vectors গুলো ৫১২ dimensional। এরা x vectors-এর চেয়ে "smarter" — কারণ এরা context বোঝে।</p>
+
+    <h3>Add & Norm — Residual Connection</h3>
+    <p>Masked Attention-এর পরে একটি গুরুত্বপূর্ণ কাজ হয়:</p>
+
+    <div class="process-steps">
+      <div class="step">
+        <div class="step-number">A</div>
+        <div class="step-content">
+          <div class="step-title">Addition (যোগ)</div>
+          <p><strong>Residual/Skip Connection:</strong> x1..x4 (original input) এবং z1..z4 (attention output) যোগ করা হয়।</p>
+          <div class="formula">z1' = z1 + x1 &nbsp;&nbsp; z2' = z2 + x2 &nbsp;&nbsp; z3' = z3 + x3 &nbsp;&nbsp; z4' = z4 + x4</div>
+          <p style="color: var(--text-secondary); font-size: 14px;">এটা করা হয় কারণ original information যাতে হারিয়ে না যায়।</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">B</div>
+        <div class="step-content">
+          <div class="step-title">Layer Normalization (নর্মালাইজেশন)</div>
+          <p>z1'..z4' কে Layer Norm Layer-এ পাঠানো হয়। প্রতিটি vector-এর জন্য mean (μ) এবং standard deviation (σ) calculate করে normalize করা হয়।</p>
+          <div class="highlight-box green">
+            <strong>কেন normalize করা হয়?</strong> অনেক multiplication ও addition-এর পরে কিছু বড় number তৈরি হতে পারে যা training unstable করে দেয়। Layer Normalization training stable রাখে।
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p>Layer Norm-এর পরে আমরা পাই: <span class="hl">z1_norm, z2_norm, z3_norm, z4_norm</span> — এগুলো এখন Cross Attention Block-এ যাবে।</p>
+  </div>
+
+  <!-- ════════════════════════════ SECTION 6: CROSS ATTENTION ════════════════════════════ -->
+  <div class="section" id="cross">
+    <div class="section-header">
+      <div class="section-number">06 // CROSS ATTENTION</div>
+      <div class="section-title">🔗 Cross Attention — Encoder-Decoder এর সংলাপ</div>
+    </div>
+
+    <div class="highlight-box purple">
+      <strong>Cross Attention হল পুরো Decoder Architecture-এর সবচেয়ে interesting অংশ!</strong>
+      <br>এখানে ইংরেজি sentence (Encoder থেকে) এবং হিন্দি sentence (Decoder থেকে) — দুটো আলাদা সিকোয়েন্স একসাথে কথা বলে।
+    </div>
+
+    <h3>সাধারণ Self Attention বনাম Cross Attention</h3>
+
+    <div class="two-col">
+      <div class="card card-blue">
+        <div class="card-title">Normal Self Attention</div>
+        <p><strong>Input:</strong> একটি মাত্র sequence</p>
+        <p><strong>Query, Key, Value:</strong> সবই একই sequence থেকে আসে</p>
+        <p>উদাহরণ: "হম দোস্ত হ্যাঁ" — সবাই নিজেদের মধ্যে কথা বলে</p>
+      </div>
+      <div class="card card-purple">
+        <div class="card-title">Cross Attention</div>
+        <p><strong>Input:</strong> দুটি sequence</p>
+        <p><strong>Query:</strong> Decoder থেকে আসে (হিন্দি)</p>
+        <p><strong>Key + Value:</strong> Encoder থেকে আসে (ইংরেজি)</p>
+        <p>উদাহরণ: হিন্দি tokens ইংরেজি tokens-এর সাথে কথা বলে</p>
+      </div>
+    </div>
+
+    <h3>Cross Attention এর Step-by-Step Process</h3>
+
+    <div class="ascii-diagram">
+Cross Attention Block-এ দুই দিক থেকে Input আসে:
+
+   ┌─────────────────────┐     ┌─────────────────────────┐
+   │  ENCODER OUTPUT     │     │  MASKED ATTENTION       │
+   │  (ইংরেজি tokens)   │     │  OUTPUT (হিন্দি tokens) │
+   │                     │     │                         │
+   │  encoder_embed[1..n]│     │  z1_norm, z2_norm,      │
+   │  (Encoder-এর final  │     │  z3_norm, z4_norm       │
+   │   contextual embed) │     │                         │
+   └──────────┬──────────┘     └────────────┬────────────┘
+              │                             │
+              ↓                             ↓
+       KEY (K) + VALUE (V)           QUERY (Q) vectors
+       vectors তৈরি হয়               তৈরি হয়
+              │                             │
+              └──────────────┬──────────────┘
+                             │
+                             ↓
+                    ┌────────────────┐
+                    │ CROSS ATTENTION │
+                    │  Mechanism      │
+                    │                │
+                    │  similarity(Q,K)│
+                    │  weighted sum   │
+                    │  with V         │
+                    └───────┬────────┘
+                            │
+                            ↓
+              zc1, zc2, zc3, zc4
+              (Cross Attention Output)
+              প্রতিটি হিন্দি token এখন
+              ইংরেজির context জানে!</div>
+
+    <div class="callout">
+      <div class="callout-title">💡 Cross Attention কী করে?</div>
+      <p>প্রতিটি হিন্দি token প্রতিটি ইংরেজি token-এর সাথে similarity score calculate করে। উদাহরণস্বরূপ, "দোস্ত" (দোস্ত = friend) token সবচেয়ে বেশি "friends" ইংরেজি token-এর দিকে attention দেবে। এভাবে translation alignment তৈরি হয়।</p>
+    </div>
+
+    <h3>Cross Attention-এর পরে Add & Norm</h3>
+    <p>আবারো Residual Connection + Layer Normalization:</p>
+
+    <div class="formula">
+      zc' = zc + z_norm (masked attention output)<br>
+      zc_norm = LayerNorm(zc')
+    </div>
+
+    <p>Output: <span class="hl">zc1_norm, zc2_norm, zc3_norm, zc4_norm</span> → এগুলো Feed Forward Block-এ যাবে।</p>
+  </div>
+
+  <!-- ════════════════════════════ SECTION 7: FFNN ════════════════════════════ -->
+  <div class="section" id="ffnn">
+    <div class="section-header">
+      <div class="section-number">07 // FEED FORWARD</div>
+      <div class="section-title">🧠 Feed Forward Neural Network</div>
+    </div>
+
+    <p>এই block Encoder-এর Feed Forward block-এর মতোই — সম্পূর্ণ copy-paste architecture, শুধু parameters আলাদা।</p>
+
+    <h3>Architecture</h3>
+
+    <div class="ascii-diagram">
+        Input Layer       Hidden Layer      Output Layer
+        ━━━━━━━━━━━       ━━━━━━━━━━━━━     ━━━━━━━━━━━━━
+
+        512 neurons  →→→  2048 neurons  →→→  512 neurons
+        
+        Activation:       ReLU              Linear
+        
+        Weights: W1 (512×2048)    Weights: W2 (2048×512)
+        Bias:    b1 (2048)        Bias:    b2 (512)</div>
+
+    <h3>Batch Processing — একসাথে ৪টি Vector</h3>
+    <p>আমাদের ৪টি vector আছে। এগুলোকে একটি Matrix-এ stack করে একসাথে পাঠানো হয়:</p>
+
+    <div class="ascii-diagram">
+Step 1: Matrix তৈরি
+━━━━━━━━━━━━━━━━━━━━
+[zc1_norm]              Shape: (4 × 512)
+[zc2_norm]  →  Matrix Z
+[zc3_norm]
+[zc4_norm]
+
+Step 2: First Layer (Expansion)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Z · W1 + b1
+= (4×512) · (512×2048) + (2048,)
+= (4×2048)  ← dimension বাড়ল!
+
+Step 3: ReLU Activation
+━━━━━━━━━━━━━━━━━━━━━━
+ReLU(4×2048) = (4×2048)
+→ সব negative values শূন্য হয়ে যায়
+→ Non-linearity introduce হয়
+
+Step 4: Second Layer (Compression)  
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ReLU_output · W2 + b2
+= (4×2048) · (2048×512) + (512,)
+= (4×512)  ← আবার 512-dim!
+
+Final Output: y1, y2, y3, y4
+প্রতিটি 512-dimensional, কিন্তু এখন non-linear information capture করতে পারে!</div>
+
+    <div class="two-col">
+      <div class="card card-blue">
+        <div class="card-title">Parameters Count</div>
+        <table class="data-table">
+          <tr><th>Component</th><th>Size</th></tr>
+          <tr><td>W1</td><td>512 × 2048 = 1,048,576</td></tr>
+          <tr><td>b1</td><td>2,048</td></tr>
+          <tr><td>W2</td><td>2048 × 512 = 1,048,576</td></tr>
+          <tr><td>b2</td><td>512</td></tr>
+          <tr><td><strong>Total</strong></td><td><strong>~2.1 Million</strong></td></tr>
+        </table>
+      </div>
+      <div class="card card-green">
+        <div class="card-title">কেন FFNN দরকার?</div>
+        <p>Attention mechanism linear patterns ধরতে পারে। কিন্তু language-এ অনেক <strong>non-linear patterns</strong> আছে।</p>
+        <p>ReLU activation দিয়ে FFNN সেই non-linear patterns capture করতে পারে।</p>
+        <p>মোটকথা: Attention = "কোথায় দেখব", FFNN = "দেখে কী বুঝব"</p>
+      </div>
+    </div>
+
+    <h3>FFNN-এর পরে Add & Norm</h3>
+    <div class="formula">y' = y + zc_norm (cross attention output)<br>y_norm = LayerNorm(y')</div>
+    <p>Final Output of First Decoder Block: <span class="hl">y1_norm, y2_norm, y3_norm, y4_norm</span></p>
+  </div>
+
+  <!-- ════════════════════════════ SECTION 8: STACKING ════════════════════════════ -->
+  <div class="section" id="stacking">
+    <div class="section-header">
+      <div class="section-number">08 // 6 BLOCKS</div>
+      <div class="section-title">📚 6টি Block Stacking — পুরো Decoder</div>
+    </div>
+
+    <p>Block 1-এর কাজ বোঝা গেলে বাকি ৫টি Block আপনাআপনি বোঝা যায়, কারণ সব Block-এর Architecture এক।</p>
+
+    <div class="ascii-diagram">
+    Input (x1..x4)
+         │
+         ▼
+    ┌─────────────────────────────────────────┐
+    │  DECODER BLOCK 1                        │
+    │  ┌──────────────┐ ┌────────────────┐   │
+    │  │Masked Self   │ │Cross Attention │   │
+    │  │Attention     │ │(Encoder Input) │   │
+    │  └──────────────┘ └────────────────┘   │
+    │  ┌──────────────┐                      │
+    │  │Feed Forward  │  Add & Norm ×3       │
+    │  └──────────────┘                      │
+    └─────────────────┬───────────────────────┘
+                      │ y1_norm..y4_norm
+                      ▼
+    ┌─────────────────────────────────────────┐
+    │  DECODER BLOCK 2  (same architecture)   │
+    │  (Different Parameters!)                │
+    └─────────────────┬───────────────────────┘
+                      │
+                      ▼
+                   Block 3
+                      │
+                      ▼
+                   Block 4
+                      │
+                      ▼
+                   Block 5
+                      │
+                      ▼
+    ┌─────────────────────────────────────────┐
+    │  DECODER BLOCK 6  (Last Block)         │
+    └─────────────────┬───────────────────────┘
+                      │
+                      ▼
+    yf1_norm, yf2_norm, yf3_norm, yf4_norm
+    (Final Output — f = final)
+                      │
+                      ▼
+               OUTPUT BLOCK →</div>
+
+    <div class="highlight-box gold">
+      <strong>প্রতিটি Block-এ Encoder-এর আউটপুট আবার ব্যবহার হয়!</strong>
+      <br>প্রতিটি Decoder Block-এর Cross Attention Layer-এ Encoder-এর final output (encoder embeddings) Key ও Value হিসেবে ব্যবহৃত হয়। তাই সব ৬টি Block-ই ইংরেজি sentence-এর context পায়।
+    </div>
+  </div>
+
+  <!-- ════════════════════════════ SECTION 9: OUTPUT BLOCK ════════════════════════════ -->
+  <div class="section" id="output">
+    <div class="section-header">
+      <div class="section-number">09 // OUTPUT BLOCK</div>
+      <div class="section-title">🎯 Output Block — Linear + Softmax</div>
+    </div>
+
+    <p>৬টি Decoder Block পার করার পরে আমরা পাই <span class="hl">yf1_norm..yf4_norm</span>। এখন এই vectors থেকে actual Hindi words predict করতে হবে।</p>
+
+    <h3>Vocabulary কী?</h3>
+
+    <div class="callout">
+      <div class="callout-title">📚 Vocabulary তৈরির Process</div>
+      <p>আমাদের ৫০০০ হিন্দি-ইংরেজি sentence pair আছে। হিন্দি column-এর সব sentence থেকে <strong>unique words</strong> collect করা হয়।</p>
+      <div class="ascii-diagram">মান লো: 5000 হিন্দি sentence → 10,000 unique হিন্দি শব্দ
+
+শব্দ ১: मैं         (Index: 0)
+শব্দ ২: बढ़िया      (Index: 1)
+শব্দ ৩: हूँ         (Index: 2)
+শব্দ ৪: हम          (Index: 3)
+শব্দ ৫: दोस्त      (Index: 4)
+শব্দ ৬: हैं         (Index: 5)
+...
+শব্দ 10000: ...     (Index: 9999)
+
+V = 10,000  ← এটাই Vocabulary Size</div>
+    </div>
+
+    <h3>Linear Layer Architecture</h3>
+
+    <div class="ascii-diagram">
+Linear Layer:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Input:  512-dimensional vector
+Output: V-dimensional vector (V = 10,000)
+
+Neurons: V = 10,000
+  → Neuron 1 represents: মৈঁ (মান)
+  → Neuron 2 represents: বড়িয়া
+  → Neuron 3 represents: হূঁ
+  → Neuron 4 represents: হম       ← আমাদের দরকার এটা
+  → Neuron 5 represents: দোস্ত   ← আর এটা
+  → Neuron 6 represents: হ্যাঁ    ← আর এটা
+  ...
+  → Neuron 10000 represents: last word
+
+Weights: W3 (512 × 10,000) = 5,120,000 parameters!
+Bias:    b3 (10,000)</div>
+
+    <h3>Softmax — Probability Distribution</h3>
+
+    <div class="ascii-diagram">
+Linear Layer Output (Un-normalized):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[3.2, 6.1, 0.4, 8.7, 2.1, 1.3, ..., 0.8]
+← V=10,000 numbers, যেকোনো value হতে পারে
+
+After Softmax:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+সব numbers → Probability (0 থেকে 1)
+সবগুলোর যোগফল = 1.0
+
+[0.01, 0.03, 0.01, 0.82, 0.05, 0.02, ..., 0.01]
+                   ↑
+            "হম" এর probability = 82%!
+                   → এটাই predicted word
+
+Example for yf1_norm (&lt;START&gt; position):
+  "হম" → probability 0.82 (সর্বোচ্চ)
+  → Decoder predicts "হম" as first output word ✓</div>
+
+    <h3>সব Tokens-এর জন্য Parallel Prediction</h3>
+
+    <div class="ascii-diagram">
+Position 1 (START → ?):    yf1_norm → Linear → Softmax → "হম"   (সর্বোচ্চ prob)
+Position 2 (হম → ?):      yf2_norm → Linear → Softmax → "দোস্ত" (সর্বোচ্চ prob)
+Position 3 (দোস্ত → ?):  yf3_norm → Linear → Softmax → "হ্যাঁ"  (সর্বোচ্চ prob)
+Position 4 (হ্যাঁ → ?):   yf4_norm → Linear → Softmax → &lt;END&gt;  (সর্বোচ্চ prob)
+
+Training-এ এই predicted words কে Ground Truth-এর সাথে compare করা হয়
+এবং Cross Entropy Loss calculate করে Backpropagation চালানো হয়।</div>
+
+    <div class="card card-green">
+      <div class="card-title">📊 Training Process-এ কী হয়?</div>
+      <ul>
+        <li>Predicted probabilities এবং actual labels (ground truth) এর মধ্যে <strong>Cross Entropy Loss</strong> calculate করা হয়।</li>
+        <li>Loss কমানোর জন্য <strong>Backpropagation</strong> করা হয়।</li>
+        <li>সব layers-এর <strong>Parameters update</strong> হয়।</li>
+        <li>বারবার এই process হয় যতক্ষণ না model সঠিকভাবে predict করতে পারে।</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════ SECTION 10: DIAGRAM ════════════════════════════ -->
+  <div class="section" id="diagram">
+    <div class="section-header">
+      <div class="section-number">10 // DIAGRAMS</div>
+      <div class="section-title">🎨 Complete Architecture Diagrams</div>
+    </div>
+
+    <h3>পুরো Decoder Architecture — A থেকে Z</h3>
+
+    <div class="ascii-diagram">
+═══════════════════════════════════════════════════════════════════════
+              TRANSFORMER DECODER — COMPLETE ARCHITECTURE (Training)
+                     Example: "We are friends" → "हम दोस्त हैं"
+═══════════════════════════════════════════════════════════════════════
+
+ENCODER (পূর্বে সম্পন্ন):
+━━━━━━━━━━━━━━━━━━━━━━━━
+"We are friends" → [Encoder Blocks × 6] → encoder_embed (contextual)
+                                              │
+                         ┌────────────────────┼─────────────────────┐
+                         │ Cross Attention     │ Cross Attention      │
+                         │ (Block 1)          │ (Block 2..6)         │
+                         └────────────────────┴──────────────────────┘
+                                  ↑ Key, Value (from Encoder)
+
+═══════════════════════════════════════════════════════════════════════
+INPUT BLOCK:
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+"हम दोस्त हैं"
+    │
+    ▼ Right Shift
+"&lt;START&gt; हम दोस्त हैं"
+    │
+    ▼ Tokenization
+[START] [हम] [दोस्त] [हैं]   ← 4 tokens
+    │
+    ▼ Embedding (Lookup Table)
+[e1]   [e2]  [e3]    [e4]   ← each 512-dim
+    │
+    ▼ Positional Encoding (+)
+[p1]   [p2]  [p3]    [p4]   ← each 512-dim
+    │
+    ▼ Addition
+[x1]   [x2]  [x3]    [x4]  → Decoder-এ প্রবেশ
+
+═══════════════════════════════════════════════════════════════════════
+DECODER BLOCK 1 (of 6):
+━━━━━━━━━━━━━━━━━━━━━━━
+
+[x1, x2, x3, x4]
+    │
+    ├──────────────────────────────────────────┐ (Residual)
+    │                                          │
+    ▼                                          │
+┌─────────────────────────────────────┐        │
+│   MASKED MULTI-HEAD SELF ATTENTION  │        │
+│                                     │        │
+│ z1←only x1                          │        │
+│ z2←x1,x2                           │        │
+│ z3←x1,x2,x3                        │        │
+│ z4←x1,x2,x3,x4                     │        │
+└─────────────────────────────────────┘        │
+    │ [z1, z2, z3, z4]                          │
+    │ + ────────────────────────────────────────┘
+    ▼
+[z1', z2', z3', z4'] → LayerNorm → [z1_norm..z4_norm]
+    │
+    ├──────────────────────────────────────────┐ (Residual)
+    │                                          │
+    ▼                                          │
+┌─────────────────────────────────────┐        │
+│         CROSS ATTENTION              │        │
+│                                     │        │
+│  Query ← z1_norm..z4_norm (Hindi)  │        │
+│  Key   ← encoder_embed (English)   │        │
+│  Value ← encoder_embed (English)   │        │
+│                                     │        │
+│  हम attends to "friends" mostly!   │        │
+└─────────────────────────────────────┘        │
+    │ [zc1, zc2, zc3, zc4]                     │
+    │ + ────────────────────────────────────────┘
+    ▼
+[zc1', ...] → LayerNorm → [zc1_norm..zc4_norm]
+    │
+    ├──────────────────────────────────────────┐ (Residual)
+    │                                          │
+    ▼                                          │
+┌─────────────────────────────────────┐        │
+│    FEED FORWARD NEURAL NETWORK      │        │
+│                                     │        │
+│  512 → 2048 (ReLU) → 512           │        │
+│  Parallel for all 4 vectors        │        │
+└─────────────────────────────────────┘        │
+    │ [y1, y2, y3, y4]                          │
+    │ + ────────────────────────────────────────┘
+    ▼
+[y1', ...] → LayerNorm → [y1_norm..y4_norm]
+    │
+    ▼
+DECODER BLOCK 2 → 3 → 4 → 5 → 6 (same structure)
+    │
+    ▼
+[yf1_norm, yf2_norm, yf3_norm, yf4_norm]
+
+═══════════════════════════════════════════════════════════════════════
+OUTPUT BLOCK:
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+[yf1_norm] → Linear(512→10000) → Softmax → P(word) → "हम"     ✓
+[yf2_norm] → Linear(512→10000) → Softmax → P(word) → "दोस्त"  ✓
+[yf3_norm] → Linear(512→10000) → Softmax → P(word) → "हैं"    ✓
+[yf4_norm] → Linear(512→10000) → Softmax → P(word) → &lt;END&gt;   ✓
+
+Training Loss = CrossEntropy(Predicted, Ground_Truth)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Backpropagation → Update all Parameters → Repeat!
+═══════════════════════════════════════════════════════════════════════</div>
+
+    <h3>Add & Norm (Residual Connection) — বিস্তারিত</h3>
+
+    <div class="ascii-diagram">
+প্রতিটি Sub-block-এর পরে এই Pattern:
+
+Input ──────┬──────────────────────────────┐
+            │                              │
+            ▼                              │ Residual/Skip
+    ┌───────────────┐                      │ Connection
+    │  Sub-block    │                      │
+    │  (Attention / │                      │
+    │   FFNN)       │                      │
+    └───────┬───────┘                      │
+            │                              │
+            ▼                              │
+          Output ──── + ◄──────────────────┘
+                      │
+                      ▼
+                LayerNorm
+                      │
+                      ▼
+                 Next Block</div>
+
+    <h3>Data Flow Summary — Shapes</h3>
+    <table class="data-table">
+      <tr>
+        <th>Stage</th>
+        <th>Vectors</th>
+        <th>Shape</th>
+        <th>Description</th>
+      </tr>
+      <tr>
+        <td>Input</td>
+        <td>x1..x4</td>
+        <td>4 × 512</td>
+        <td>Embedding + Positional Encoding</td>
+      </tr>
+      <tr>
+        <td>After Masked Attn</td>
+        <td>z1_norm..z4_norm</td>
+        <td>4 × 512</td>
+        <td>Context-aware, masked</td>
+      </tr>
+      <tr>
+        <td>After Cross Attn</td>
+        <td>zc1_norm..zc4_norm</td>
+        <td>4 × 512</td>
+        <td>English-Hindi aligned</td>
+      </tr>
+      <tr>
+        <td>FFNN Internal</td>
+        <td>hidden</td>
+        <td>4 × 2048</td>
+        <td>Expanded representation</td>
+      </tr>
+      <tr>
+        <td>After FFNN</td>
+        <td>y1_norm..y4_norm</td>
+        <td>4 × 512</td>
+        <td>Non-linear features</td>
+      </tr>
+      <tr>
+        <td>After Block 6</td>
+        <td>yf1_norm..yf4_norm</td>
+        <td>4 × 512</td>
+        <td>Final representations</td>
+      </tr>
+      <tr>
+        <td>Linear Layer</td>
+        <td>logits</td>
+        <td>4 × V (10000)</td>
+        <td>Un-normalized scores</td>
+      </tr>
+      <tr>
+        <td>After Softmax</td>
+        <td>probabilities</td>
+        <td>4 × V (10000)</td>
+        <td>Word probabilities (sum=1)</td>
+      </tr>
+    </table>
+
+    <h3>সম্পূর্ণ গাইডের সারসংক্ষেপ</h3>
+
+    <div class="card card-blue">
+      <div class="card-title">🔑 মূল বিষয়গুলো — Key Takeaways</div>
+      <div class="process-steps" style="margin-top:20px;">
+        <div class="step">
+          <div class="step-number">①</div>
+          <div class="step-content">
+            <div class="step-title">Input Processing (৪ ধাপ)</div>
+            <p>Right Shifting → Tokenization → Embedding (512-dim) → Positional Encoding → x1..x4</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">②</div>
+          <div class="step-content">
+            <div class="step-title">Masked Self Attention</div>
+            <p>Future tokens mask করা হয়। প্রতিটি position শুধু আগের positions দেখতে পারে।</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">③</div>
+          <div class="step-content">
+            <div class="step-title">Cross Attention</div>
+            <p>Query Decoder থেকে, Key+Value Encoder থেকে। Source-Target alignment তৈরি হয়।</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">④</div>
+          <div class="step-content">
+            <div class="step-title">Feed Forward Neural Network</div>
+            <p>512 → 2048 (ReLU) → 512। Non-linear features capture করে।</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">⑤</div>
+          <div class="step-content">
+            <div class="step-title">6 Blocks Stacking</div>
+            <p>একই architecture ৬ বার। প্রতিটি Block-এর parameters আলাদা।</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">⑥</div>
+          <div class="step-content">
+            <div class="step-title">Output Block</div>
+            <p>Linear (512→V) + Softmax → Word Probabilities → Training Loss</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="highlight-box purple">
+      <strong>পরবর্তী ভিডিও / গাইড:</strong> Inference (Prediction) Time-এ Decoder কীভাবে কাজ করে — Auto-regressive mode, যেখানে token by token generate হয়। Encoder-এর structure একই থাকবে কিন্তু Decoder Auto-regressive পদ্ধতিতে চলবে।
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════ FOOTER ════════════════════════════ -->
+<div class="footer">
+  <p style="font-family: 'JetBrains Mono', monospace; letter-spacing: 2px; text-transform: uppercase; font-size: 12px; margin-bottom: 12px;">Transformer Decoder Architecture — Technical Guide</p>
+  <p>সম্পূর্ণ বাংলায় রচিত | ভাষা: বাংলা + English Technical Terms</p>
+  <p style="margin-top: 8px;">Based on: "Attention Is All You Need" (Vaswani et al., 2017)</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Attention-এ Scaling এর সহজ ব্যাখ্যা</title>
+    
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Kalpurush';
+            line-height: 1.7;
+            color: #333;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px 40px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+        .step-card {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.2s;
+        }
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        .highlight {
+            background-color: #e8f6f3;
+            padding: 15px;
+            border-left: 4px solid #1abc9c;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-weight: bold;
+            color: #16a085;
+        }
+        .warning {
+            background-color: #fdedec;
+            padding: 15px;
+            border-left: 4px solid #e74c3c;
+            border-radius: 4px;
+            margin: 15px 0;
+            color: #c0392b;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        .conclusion {
+            background-color: #ebf5fb;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            text-align: center;
+            font-size: 1.1em;
+            border: 2px dashed #3498db;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Self-Attention-এ Scaling: $\sqrt{d_k}$ দিয়ে কেন ভাগ করা হয়?</h1>
+    <p>ট্রান্সফর্মার মডেলে Self-Attention মেকানিজমের একটি অত্যন্ত গুরুত্বপূর্ণ অংশ হলো <strong>Scaling</strong>। $Q$ (Query) এবং $K$ (Key) এর Dot Product-কে কেন ডাইমেনশনের বর্গমূল বা $\sqrt{d_k}$ দিয়ে ভাগ করা হয়, তার সম্পূর্ণ গাণিতিক ও যৌক্তিক ব্যাখ্যা নিচে ধাপে ধাপে আলোচনা করা হলো।</p>
+
+    <div class="step-card">
+        <h2>১. শুরুর অবস্থা: $Q$ এবং $K$ ম্যাট্রিক্সের বৈশিষ্ট্য</h2>
+        <p>ট্রেনিংয়ের শুরুতে যখন $Q$ এবং $K$ ভেক্টরগুলো তৈরি হয়, তখন গাণিতিকভাবে তাদের মানগুলো এমনভাবে থাকে যেন:</p>
+        <ul>
+            <li><strong>গড় (Mean) = ০:</strong> গড় শূন্য হওয়ার মানে হলো, ভেক্টরের ভেতরে পজিটিভ এবং নেগেটিভ—উভয় ধরনের মানই রয়েছে। শুধুমাত্র পজিটিভ মান থাকলে গড় কখনোই শূন্য হতে পারে না।</li>
+            <li><strong>ভ্যারিয়েন্স (Variance) = ১:</strong> এর মানে হলো, মানগুলো তাদের গড়ের (শূন্য) খুব কাছাকাছি অবস্থান করছে, খুব বেশি ছড়ানো-ছিটানো নেই।</li>
+        </ul>
+    </div>
+
+    <div class="step-card">
+        <h2>২. Dot Product-এর প্রভাব</h2>
+        <p>আমরা যখন $Q$ এবং $K$ ভেক্টরের Dot Product ($Q \cdot K$) বের করি, তখন প্রতিটি উপাদানের গুণফল যোগ হতে থাকে।</p>
+        <p>গাণিতিক নিয়ম অনুযায়ী, $d_k$ (ডাইমেনশন) সংখ্যক উপাদানের গুণফল যোগ করার ফলে নতুন যে মানগুলো পাওয়া যায়, তাদের ভ্যারিয়েন্স বেড়ে ডাইমেনশনের সমান হয়ে যায়।</p>
+        <div class="highlight">
+            সূত্র: Dot Product-এর পর নতুন ভ্যারিয়েন্স = $d_k$
+        </div>
+        <p>অর্থাৎ, ডাইমেনশন যদি $512$ হয়, তবে ভ্যারিয়েন্সও $512$ হয়ে যাবে। এর ফলে ডট প্রোডাক্টের মানগুলো অনেক বড় বা অনেক ছোট (যেমন: +১০০ বা -১২০) রেঞ্জে ছড়িয়ে পড়ে।</p>
+    </div>
+
+    <div class="step-card">
+        <h2>৩. আসল সমস্যা: Softmax Saturation</h2>
+        <p>ডট প্রোডাক্টের এই বড় মানগুলো এরপর <strong>Softmax</strong> ফাংশনের ভেতর দিয়ে যায়। Softmax মূলত এক্সপোনেনশিয়াল ($e^x$) হিসেবে কাজ করে।</p>
+        <div class="warning">
+            সমস্যা: মানগুলো অনেক বড় হলে Softmax ফাংশন সবচেয়ে বড় মানটিকে প্রায় 100% প্রবাবিলিটি দিয়ে দেয় এবং বাকি সবগুলোকে 0 করে দেয়।
+        </div>
+        <p>এর ফলে মডেল "একগুঁয়ে" বা Overconfident হয়ে যায়। অন্যান্য শব্দের প্রতি সে আর কোনো মনোযোগ (Attention) দেয় না। ফলস্বরূপ, ট্রেনিংয়ের সময় গ্র্যাডিয়েন্ট শূন্যের কাছাকাছি চলে যায় <strong>(Vanishing Gradient)</strong> এবং মডেল নতুন কিছু শেখা বন্ধ করে দেয়।</p>
+    </div>
+
+    <div class="step-card">
+        <h2>৪. জাদুর কাঠি: $\sqrt{d_k}$ দিয়ে Scaling</h2>
+        <p>এই বিশাল ছড়িয়ে পড়া মানগুলোকে আবার আগের মতো নিয়ন্ত্রণের মধ্যে আনার জন্যই আমরা ডট প্রোডাক্টকে $\sqrt{d_k}$ (ডাইমেনশনের বর্গমূল) দিয়ে ভাগ করি।</p>
+        <p>কোনো ডিস্ট্রিবিউশনের ভ্যারিয়েন্স যদি $d_k$ হয়, তবে তাকে $\sqrt{d_k}$ দিয়ে ভাগ করলে তার ভ্যারিয়েন্স আবার <strong>১</strong> এ ফিরে আসে!</p>
+        <div class="highlight">
+            $$\text{Scaled Score} = \frac{Q \cdot K}{\sqrt{d_k}}$$
+        </div>
+        <p>ভ্যারিয়েন্স ১-এ ফিরে আসার কারণে মানগুলো আবার ছোট রেঞ্জে (যেমন: -৩ থেকে +৩) চলে আসে। এতে Softmax ফাংশন খুব স্মুথলি কাজ করতে পারে এবং সব শব্দের মাঝে সুন্দরভাবে Attention ভাগ করে দিতে পারে।</p>
+    </div>
+
+    <div class="step-card">
+        <h2>৫. গাণিতিক বনাম প্র্যাকটিক্যাল ফলাফল</h2>
+        <p>আমরা যদি ৫ ডাইমেনশনের ($d_k = 5$) একটি সিমুলেশন করি এবং ১ লক্ষ র‍্যান্ডম ভেক্টর জোড়ার ডট প্রোডাক্ট নিই, তবে দেখা যায় ডট প্রোডাক্টের ভ্যারিয়েন্স আসে প্রায় <strong>৪.৯৭৯</strong> (যা ৫ এর অত্যন্ত কাছাকাছি)।</p>
+        <p>এটি নিখুঁত ৫ না হওয়ার কারণ হলো এটি একটি কম্পিউটার সিমুলেশন (কয়েন টসের মতো)। স্যাম্পল সাইজ অসীম হলে এটি ঠিক ৫.০০ ই হতো। তবে, এই মানগুলোকে যখন $\sqrt{5}$ দিয়ে ভাগ করা হয়, তখন ভ্যারিয়েন্স পুনরায় <strong>০.৯৯৬</strong> (প্রায় ১) এ ফিরে আসে।</p>
+    </div>
+
+    <div class="conclusion">
+        <strong>সারসংক্ষেপ:</strong><br><br>
+        $Q$ এবং $K$-এর প্রাথমিক ভ্যারিয়েন্স ১ থাকলেও, Dot Product করার পর ডাইমেনশনের কারণে তা ফুলেফেঁপে $d_k$ হয়ে যায়। Softmax যেন এই বড় মানগুলোর কারণে কাজ করা বন্ধ না করে দেয় (Vanishing Gradient), তাই মানগুলোকে $\sqrt{d_k}$ দিয়ে ভাগ করে পুনরায় ভ্যারিয়েন্স ১-এর কাছাকাছি নিয়ে আসা হয়। এটি মডেলের স্থিতিশীলতা এবং শেখার ক্ষমতা বজায় রাখে।
+    </div>
+
+</div>
+
+</body>
+</html>

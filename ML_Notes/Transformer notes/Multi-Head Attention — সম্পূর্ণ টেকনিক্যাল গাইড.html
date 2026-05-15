@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Head Attention — সম্পূর্ণ টেকনিক্যাল গাইড</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&family=Noto+Sans+Bengali:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #f78166;
+    --accent3: #3fb950;
+    --accent4: #d2a8ff;
+    --accent5: #ffa657;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-dim: #656d76;
+    --highlight: #1f6feb;
+    --yellow: #e3b341;
+    --cyan: #39d353;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans Bengali', sans-serif;
+    font-size: 15px;
+    line-height: 1.8;
+    padding: 0;
+  }
+
+  /* COVER PAGE */
+  .cover {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 40%, #0d1117 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(88,166,255,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: -150px; right: -150px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(247,129,102,0.07) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .cover-badge {
+    display: inline-block;
+    background: rgba(88,166,255,0.1);
+    border: 1px solid rgba(88,166,255,0.3);
+    color: var(--accent);
+    padding: 6px 20px;
+    border-radius: 20px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+
+  .cover h1 {
+    font-family: 'Noto Serif Bengali', serif;
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #58a6ff, #d2a8ff, #f78166);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .cover-subtitle {
+    font-size: 20px;
+    color: var(--text-muted);
+    margin-bottom: 40px;
+    font-weight: 300;
+  }
+
+  .cover-meta {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    margin-bottom: 50px;
+    flex-wrap: wrap;
+  }
+
+  .cover-meta-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 24px;
+    text-align: center;
+  }
+
+  .cover-meta-item .label { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+  .cover-meta-item .value { font-size: 16px; color: var(--accent); font-weight: 600; margin-top: 4px; }
+
+  .cover-toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 30px 40px;
+    text-align: left;
+    max-width: 600px;
+    width: 100%;
+  }
+
+  .cover-toc h3 { color: var(--accent); margin-bottom: 16px; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+  .cover-toc ul { list-style: none; }
+  .cover-toc li { padding: 6px 0; color: var(--text-muted); font-size: 14px; display: flex; align-items: center; gap: 10px; }
+  .cover-toc li::before { content: '→'; color: var(--accent); font-size: 12px; }
+
+  /* MAIN CONTENT */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 50px 40px;
+  }
+
+  /* SECTION */
+  .section {
+    margin-bottom: 60px;
+    page-break-inside: avoid;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .icon-blue { background: rgba(88,166,255,0.15); }
+  .icon-orange { background: rgba(247,129,102,0.15); }
+  .icon-green { background: rgba(63,185,80,0.15); }
+  .icon-purple { background: rgba(210,168,255,0.15); }
+  .icon-yellow { background: rgba(227,179,65,0.15); }
+
+  .section-title {
+    font-family: 'Noto Serif Bengali', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .section-num {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* CALLOUT BOXES */
+  .callout {
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    border-left: 3px solid;
+  }
+
+  .callout-blue { background: rgba(88,166,255,0.07); border-color: var(--accent); }
+  .callout-orange { background: rgba(247,129,102,0.07); border-color: var(--accent2); }
+  .callout-green { background: rgba(63,185,80,0.07); border-color: var(--accent3); }
+  .callout-purple { background: rgba(210,168,255,0.07); border-color: var(--accent4); }
+  .callout-yellow { background: rgba(227,179,65,0.07); border-color: var(--yellow); }
+
+  .callout-title {
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .callout-blue .callout-title { color: var(--accent); }
+  .callout-orange .callout-title { color: var(--accent2); }
+  .callout-green .callout-title { color: var(--accent3); }
+  .callout-purple .callout-title { color: var(--accent4); }
+  .callout-yellow .callout-title { color: var(--yellow); }
+
+  /* STEP BOXES */
+  .steps { display: flex; flex-direction: column; gap: 16px; }
+
+  .step {
+    display: flex;
+    gap: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .step-num {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent4));
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-content h4 { color: var(--accent); margin-bottom: 6px; font-size: 15px; }
+  .step-content p { color: var(--text-muted); font-size: 14px; }
+
+  /* COMPARISON TABLE */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 14px;
+  }
+
+  th {
+    background: var(--surface2);
+    padding: 12px 16px;
+    text-align: left;
+    color: var(--accent);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 1px solid var(--border);
+  }
+
+  td {
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    background: var(--surface);
+  }
+
+  tr:hover td { background: var(--surface2); }
+
+  /* CODE/DIAGRAM */
+  .diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin: 20px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--accent3);
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .diagram .comment { color: var(--text-dim); }
+  .diagram .highlight { color: var(--yellow); }
+  .diagram .blue { color: var(--accent); }
+  .diagram .orange { color: var(--accent2); }
+  .diagram .purple { color: var(--accent4); }
+
+  /* FORMULA BOX */
+  .formula {
+    background: linear-gradient(135deg, rgba(88,166,255,0.05), rgba(210,168,255,0.05));
+    border: 1px solid rgba(88,166,255,0.2);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    color: var(--accent4);
+  }
+
+  /* GRID CARDS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 20px 0; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .card-title { font-weight: 600; color: var(--accent); margin-bottom: 8px; font-size: 14px; }
+  .card p { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+
+  /* HIGHLIGHT TEXT */
+  .hl-blue { color: var(--accent); font-weight: 600; }
+  .hl-orange { color: var(--accent2); font-weight: 600; }
+  .hl-green { color: var(--accent3); font-weight: 600; }
+  .hl-purple { color: var(--accent4); font-weight: 600; }
+  .hl-yellow { color: var(--yellow); font-weight: 600; }
+
+  p { margin-bottom: 14px; color: var(--text-muted); }
+  h3 { color: var(--text); font-size: 17px; margin: 24px 0 12px; }
+  h4 { color: var(--accent); font-size: 15px; margin: 18px 0 8px; }
+
+  ul, ol { padding-left: 24px; margin-bottom: 14px; }
+  li { color: var(--text-muted); margin-bottom: 6px; font-size: 14px; }
+
+  .tag {
+    display: inline-block;
+    background: rgba(88,166,255,0.1);
+    border: 1px solid rgba(88,166,255,0.2);
+    color: var(--accent);
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    margin: 2px;
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 40px 0;
+  }
+
+  /* PROCESS FLOW */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 20px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .flow-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 13px;
+    min-width: 90px;
+  }
+
+  .flow-item .label { color: var(--text-dim); font-size: 11px; }
+  .flow-item .value { color: var(--accent); font-weight: 600; font-size: 14px; margin-top: 4px; }
+
+  .flow-arrow {
+    color: var(--text-dim);
+    font-size: 20px;
+    padding: 0 8px;
+  }
+
+  /* MATRIX VISUAL */
+  .matrix-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .matrix {
+    background: var(--surface);
+    border: 2px solid;
+    border-radius: 6px;
+    padding: 10px 14px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  .matrix-blue { border-color: var(--accent); color: var(--accent); }
+  .matrix-orange { border-color: var(--accent2); color: var(--accent2); }
+  .matrix-green { border-color: var(--accent3); color: var(--accent3); }
+  .matrix-purple { border-color: var(--accent4); color: var(--accent4); }
+  .matrix-yellow { border-color: var(--yellow); color: var(--yellow); }
+
+  .matrix .shape { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  .op { font-size: 20px; color: var(--text-dim); padding: 0 6px; }
+
+  @media print {
+    body { background: white; color: #222; }
+    .cover { background: white; }
+    .cover h1 { color: #1a1a2e; -webkit-text-fill-color: #1a1a2e; }
+    .section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <div class="cover-badge">টেকনিক্যাল গাইড · Transformer Series</div>
+  <h1>Multi-Head Attention</h1>
+  <div class="cover-subtitle">সম্পূর্ণ ধাপে ধাপে ব্যাখ্যা — Self-Attention থেকে Multi-Head পর্যন্ত</div>
+
+  <div class="cover-meta">
+    <div class="cover-meta-item">
+      <div class="label">বিষয়</div>
+      <div class="value">Transformer Architecture</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">ভাষা</div>
+      <div class="value">বাংলা + English Terms</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">ধরন</div>
+      <div class="value">Deep Technical Guide</div>
+    </div>
+  </div>
+
+  <div class="cover-toc">
+    <h3>বিষয়বস্তু</h3>
+    <ul>
+      <li>Self-Attention রিক্যাপ — কী এবং কেন?</li>
+      <li>Self-Attention-এর সীমাবদ্ধতা ও সমস্যা</li>
+      <li>Multi-Head Attention — মূল ধারণা ও সমাধান</li>
+      <li>ধাপে ধাপে Matrix-level Process</li>
+      <li>Original Transformer Paper-এর Implementation</li>
+      <li>Dimension Reduction — কেন ৫১২ থেকে ৬৪?</li>
+      <li>Visual Diagrams ও ASCII Architecture</li>
+      <li>Visualization Tool Demo বিশ্লেষণ</li>
+    </ul>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+
+  <!-- SECTION 1: INTUITION -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-blue">🎯</div>
+      <div>
+        <div class="section-num">Section 01</div>
+        <div class="section-title">সহজ ভাষায় পরিচিতি (Intuition)</div>
+      </div>
+    </div>
+
+    <div class="callout callout-blue">
+      <div class="callout-title">💡 মূল প্রশ্ন</div>
+      আমরা একটি বাক্যকে কীভাবে সংখ্যায় রূপান্তর করব, যাতে অর্থ বোঝা যায়? এবং একটি বাক্যের একাধিক অর্থ থাকলে কীভাবে সব অর্থ ধরব?
+    </div>
+
+    <h3>বাস্তব উদাহরণ দিয়ে বোঝা যাক</h3>
+    <p>কল্পনা করো তুমি একটি গোয়েন্দা। তোমাকে একটি রহস্যময় বাক্য দেওয়া হলো:</p>
+
+    <div class="callout callout-yellow">
+      <div class="callout-title">🔍 রহস্যময় বাক্য</div>
+      <strong>"The man saw the astronomer with a telescope"</strong>
+      <br><br>
+      এই বাক্যের <strong>দুটি অর্থ</strong> হতে পারে:<br>
+      ১. লোকটি টেলিস্কোপ দিয়ে জ্যোতির্বিদকে দেখল (লোকটির হাতে টেলিস্কোপ)<br>
+      ২. লোকটি জ্যোতির্বিদকে দেখল, যার হাতে টেলিস্কোপ ছিল (জ্যোতির্বিদের হাতে টেলিস্কোপ)
+    </div>
+
+    <p>একজন সাধারণ গোয়েন্দা একটাই অর্থ ধরতে পারে। কিন্তু একজন দক্ষ গোয়েন্দার দল একসাথে দুটো দিক থেকে তদন্ত করে। <span class="hl-blue">Multi-Head Attention হলো সেই দক্ষ গোয়েন্দার দল!</span></p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🔴 Self-Attention (একা গোয়েন্দা)</div>
+        <p>একটিই দৃষ্টিকোণ থেকে দেখে। একটি বাক্যে শুধু একটি অর্থ খোঁজে।</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🟢 Multi-Head Attention (দলগত তদন্ত)</div>
+        <p>একসাথে অনেক দৃষ্টিকোণ থেকে দেখে। একই বাক্যে একাধিক অর্থ ধরতে পারে।</p>
+      </div>
+    </div>
+
+    <h3>আরেকটি বাস্তব উদাহরণ — Document Summarization</h3>
+    <p>ধরো তুমি একটি document summarization tool বানাচ্ছ। যদি শুধু Self-Attention ব্যবহার করো, তুমি শুধু একটি দৃষ্টিকোণ থেকে summary তৈরি করতে পারবে। কিন্তু Multi-Head Attention দিয়ে একই document-কে <span class="hl-orange">multiple perspectives</span> থেকে দেখে multiple summaries তৈরি করা যায় — যা অনেক বেশি তথ্যবহুল।</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 2: SELF-ATTENTION RECAP -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-orange">📖</div>
+      <div>
+        <div class="section-num">Section 02</div>
+        <div class="section-title">Self-Attention রিক্যাপ</div>
+      </div>
+    </div>
+
+    <p>Multi-Head Attention বোঝার আগে Self-Attention ভালো করে বুঝতে হবে। Self-Attention হলো এমন একটি technique যা দিয়ে <span class="hl-green">Contextual Embeddings</span> তৈরি করা যায়।</p>
+
+    <h3>সমস্যাটা কী ছিল? — Static Embeddings-এর দুর্বলতা</h3>
+
+    <div class="callout callout-orange">
+      <div class="callout-title">⚠️ Static Embeddings-এর সমস্যা</div>
+      "Money" এবং "Bank" শব্দের embedding সবসময় একই থাকে। কিন্তু:
+      <br>• <strong>"Money Bank"</strong> — এখানে "Bank" মানে আর্থিক প্রতিষ্ঠান
+      <br>• <strong>"River Bank"</strong> — এখানে "Bank" মানে নদীর তীর
+      <br>
+      Static embedding এই পার্থক্য ধরতে পারে না!
+    </div>
+
+    <h3>Self-Attention কীভাবে এই সমস্যা সমাধান করে?</h3>
+    <p>Self-Attention <span class="hl-blue">Contextual Embeddings</span> তৈরি করে — অর্থাৎ একই শব্দ বিভিন্ন context-এ বিভিন্ন embedding পাবে।</p>
+
+    <div class="diagram"><span class="comment">Self-Attention প্রক্রিয়ার সংক্ষিপ্ত চিত্র:</span>
+
+Input Sentence:  [ "Money", "Bank" ]
+                        ↓
+Static Embeddings: [ E_money (dim=4), E_bank (dim=4) ]
+                        ↓
+        <span class="orange">┌─────────────────────────┐</span>
+        <span class="orange">│     Self-Attention       │</span>
+        <span class="orange">│  W_Q, W_K, W_V matrices  │</span>
+        <span class="orange">└─────────────────────────┘</span>
+                        ↓
+Contextual Embeddings: [ Y_money, Y_bank ]
+<span class="comment">  (এখন "Bank"-এর embedding context অনুযায়ী পরিবর্তিত হয়)</span></div>
+
+    <h3>Self-Attention-এর ভেতরে ঠিক কী হয়?</h3>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">১</div>
+        <div class="step-content">
+          <h4>তিনটি Weight Matrix তৈরি করো</h4>
+          <p>W_Q (Query), W_K (Key), W_V (Value) — এই তিনটি learnable matrix ব্যবহার করা হয়</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">২</div>
+        <div class="step-content">
+          <h4>প্রতিটি শব্দের জন্য Q, K, V Vector বের করো</h4>
+          <p>প্রতিটি embedding-কে W_Q, W_K, W_V-এর সাথে Matrix Multiplication করো → প্রতিটি শব্দের জন্য তিনটি নতুন vector পাবে</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৩</div>
+        <div class="step-content">
+          <h4>Similarity Score বের করো</h4>
+          <p>প্রতিটি শব্দের Q vector-কে অন্য শব্দের K vector-এর সাথে Dot Product করো</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৪</div>
+        <div class="step-content">
+          <h4>Scale করো</h4>
+          <p>Score-গুলো √d_k দিয়ে ভাগ করো — gradient flow ঠিক রাখতে</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৫</div>
+        <div class="step-content">
+          <h4>Softmax দিয়ে Normalize করো</h4>
+          <p>Scaled score-গুলোকে Softmax দিয়ে 0-1 এর মধ্যে নিয়ে আসো → এগুলো হলো Attention Weights</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৬</div>
+        <div class="step-content">
+          <h4>Weighted Sum — Contextual Embedding তৈরি করো</h4>
+          <p>Attention Weights দিয়ে V vectors-এর Weighted Sum করো → এটাই হলো Contextual Embedding (Z)</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="formula">
+      Attention(Q, K, V) = softmax( Q × K<sup>T</sup> / √d_k ) × V
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 3: SELF-ATTENTION LIMITATION -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-orange">⚠️</div>
+      <div>
+        <div class="section-num">Section 03</div>
+        <div class="section-title">Self-Attention-এর সীমাবদ্ধতা</div>
+      </div>
+    </div>
+
+    <div class="callout callout-orange">
+      <div class="callout-title">🚨 সবচেয়ে বড় সমস্যা</div>
+      Self-Attention একটি বাক্য বা document-কে শুধুমাত্র <strong>একটি দৃষ্টিকোণ (Single Perspective)</strong> থেকে দেখতে পারে। যদি একাধিক অর্থ বা দৃষ্টিকোণ থাকে, Self-Attention সেগুলো ধরতে পারে না।
+    </div>
+
+    <h3>উদাহরণ দিয়ে বোঝা যাক</h3>
+    <p>বাক্যটি: <span class="hl-yellow">"The man saw the astronomer with a telescope"</span></p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🔵 সম্ভাব্য অর্থ ১</div>
+        <p>"Man" এবং "Telescope"-এর মধ্যে strong similarity<br>→ লোকটি টেলিস্কোপ দিয়ে দেখছে</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🟣 সম্ভাব্য অর্থ ২</div>
+        <p>"Astronomer" এবং "Telescope"-এর মধ্যে strong similarity<br>→ জ্যোতির্বিদের কাছে টেলিস্কোপ আছে</p>
+      </div>
+    </div>
+
+    <p>Self-Attention এই দুটোর মধ্যে যেকোনো <span class="hl-orange">একটি</span> অর্থই ধরতে পারে — দুটো একসাথে নয়। এটাই মূল সমস্যা।</p>
+
+    <h3>Self-Attention যা করতে পারে না</h3>
+    <ul>
+      <li>একটি বাক্যের multiple interpretations একসাথে ধরা</li>
+      <li>Syntactic relationship (ব্যাকরণিক সম্পর্ক) এবং Semantic relationship (অর্থগত সম্পর্ক) একসাথে capture করা</li>
+      <li>Short-range এবং Long-range dependencies একই সাথে মনোযোগ দেওয়া</li>
+      <li>বিভিন্ন ধরনের linguistic patterns একই সাথে শেখা</li>
+    </ul>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 4: MULTI-HEAD CONCEPT -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-green">🧠</div>
+      <div>
+        <div class="section-num">Section 04</div>
+        <div class="section-title">Multi-Head Attention — মূল সমাধান</div>
+      </div>
+    </div>
+
+    <div class="callout callout-green">
+      <div class="callout-title">✅ সমাধান কী?</div>
+      একটি Self-Attention-এর বদলে <strong>একাধিক Self-Attention মডিউল</strong> একসাথে parallel-এ চালাও। প্রতিটি Self-Attention মডিউলকে বলা হয় একটি <strong>"Head"</strong>। একাধিক Head থাকলে তাকে বলা হয় <strong>Multi-Head Attention</strong>।
+    </div>
+
+    <h3>মূল আইডিয়াটা সহজ ভাষায়</h3>
+
+    <div class="flow">
+      <div class="flow-item">
+        <div class="label">একটি সেট</div>
+        <div class="value">W_Q¹, W_K¹, W_V¹</div>
+      </div>
+      <div class="flow-arrow">+</div>
+      <div class="flow-item">
+        <div class="label">আরেকটি সেট</div>
+        <div class="value">W_Q², W_K², W_V²</div>
+      </div>
+      <div class="flow-arrow">+</div>
+      <div class="flow-item">
+        <div class="label">আরও...</div>
+        <div class="value">W_Q⁸, W_K⁸, W_V⁸</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item">
+        <div class="label">ফলাফল</div>
+        <div class="value">8 Perspectives!</div>
+      </div>
+    </div>
+
+    <p>প্রতিটি set of weights আলাদা আলাদাভাবে train হয়, তাই প্রতিটি head আলাদা pattern শেখে। এইভাবে <span class="hl-green">multiple perspectives</span> capture করা সম্ভব হয়।</p>
+
+    <div class="callout callout-purple">
+      <div class="callout-title">📌 মনে রাখার বিষয়</div>
+      Original "Attention Is All You Need" paper-এ <strong>8টি Attention Head</strong> ব্যবহার করা হয়েছে — মানে একসাথে 8টি Self-Attention মডিউল parallel-এ চলে, যা 8টি ভিন্ন দৃষ্টিকোণ capture করে।
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 5: DETAILED PROCESS -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-purple">⚙️</div>
+      <div>
+        <div class="section-num">Section 05</div>
+        <div class="section-title">ধাপে ধাপে সম্পূর্ণ প্রক্রিয়া (Matrix Level)</div>
+      </div>
+    </div>
+
+    <p>উদাহরণ হিসেবে নেওয়া হচ্ছে: <span class="hl-yellow">"Money Bank"</span> — ২টি শব্দ, প্রতিটির embedding dimension = 4, এবং আমরা 2টি Head ব্যবহার করব।</p>
+
+    <h3>ধাপ ১ — Input Embeddings তৈরি করো</h3>
+
+    <div class="matrix-container">
+      <div class="matrix matrix-yellow">
+        E_money<br>[e₁, e₂, e₃, e₄]
+        <div class="shape">dim = 4</div>
+      </div>
+      <div class="op">+</div>
+      <div class="matrix matrix-yellow">
+        E_bank<br>[e₁, e₂, e₃, e₄]
+        <div class="shape">dim = 4</div>
+      </div>
+      <div class="op">→</div>
+      <div class="matrix matrix-blue">
+        Input Matrix E<br>shape: 2 × 4
+        <div class="shape">২টি শব্দ, ৪ dimension</div>
+      </div>
+    </div>
+
+    <h3>ধাপ ২ — Multiple Weight Matrices তৈরি করো (প্রতি Head-এর জন্য)</h3>
+
+    <div class="diagram"><span class="comment">Head 1 এর জন্য:</span>
+W_Q¹  (4×4)    W_K¹  (4×4)    W_V¹  (4×4)
+
+<span class="comment">Head 2 এর জন্য:</span>
+W_Q²  (4×4)    W_K²  (4×4)    W_V²  (4×4)
+
+<span class="comment">মোট Weight Matrices = 2 heads × 3 matrices = 6টি</span>
+<span class="comment">এই সব weights training-এ শেখা হয়।</span></div>
+
+    <h3>ধাপ ৩ — Q, K, V Matrices বের করো (প্রতি Head-এর জন্য)</h3>
+
+    <div class="matrix-container">
+      <div class="matrix matrix-blue">E (2×4)</div>
+      <div class="op">×</div>
+      <div class="matrix matrix-orange">W_Q¹ (4×4)</div>
+      <div class="op">=</div>
+      <div class="matrix matrix-green">Q¹ (2×4)<br><small>Q_money¹, Q_bank¹</small></div>
+    </div>
+
+    <div class="matrix-container">
+      <div class="matrix matrix-blue">E (2×4)</div>
+      <div class="op">×</div>
+      <div class="matrix matrix-orange">W_K¹ (4×4)</div>
+      <div class="op">=</div>
+      <div class="matrix matrix-green">K¹ (2×4)<br><small>K_money¹, K_bank¹</small></div>
+    </div>
+
+    <div class="matrix-container">
+      <div class="matrix matrix-blue">E (2×4)</div>
+      <div class="op">×</div>
+      <div class="matrix matrix-orange">W_V¹ (4×4)</div>
+      <div class="op">=</div>
+      <div class="matrix matrix-green">V¹ (2×4)<br><small>V_money¹, V_bank¹</small></div>
+    </div>
+
+    <p style="margin-top:12px">একইভাবে Head 2 এর জন্যও Q², K², V² বের হবে। মোট এখন আমাদের কাছে আছে: <span class="tag">Q¹ K¹ V¹</span> <span class="tag">Q² K² V²</span></p>
+
+    <h3>ধাপ ৪ — প্রতিটি Head-এ Self-Attention চালাও (Parallel)</h3>
+
+    <div class="diagram"><span class="blue">Head 1:</span>
+Input: Q¹, K¹, V¹
+Process: softmax( Q¹ × (K¹)ᵀ / √4 ) × V¹
+Output: <span class="green">Z¹ = [Z_money¹, Z_bank¹]</span>  shape: 2×4
+
+<span class="purple">Head 2:</span>
+Input: Q², K², V²
+Process: softmax( Q² × (K²)ᵀ / √4 ) × V²
+Output: <span class="green">Z² = [Z_money², Z_bank²]</span>  shape: 2×4
+
+<span class="comment">দুটো Head একসাথে parallel-এ চলে।</span>
+<span class="comment">Z¹ এবং Z² সম্পূর্ণ আলাদা — ভিন্ন perspective capture করে।</span></div>
+
+    <h3>ধাপ ৫ — Concatenation করো (জোড়া লাগাও)</h3>
+    <p>সব Head-এর output একসাথে জুড়ে দাও:</p>
+
+    <div class="matrix-container">
+      <div class="matrix matrix-blue">Z¹<br>(2×4)</div>
+      <div class="op">||</div>
+      <div class="matrix matrix-purple">Z²<br>(2×4)</div>
+      <div class="op">=</div>
+      <div class="matrix matrix-orange">Z_concat<br>(2×8)</div>
+    </div>
+
+    <div class="callout callout-blue">
+      <div class="callout-title">📐 Shape বিশ্লেষণ</div>
+      Z¹ হলো 2×4, Z² হলো 2×4 → Concatenate করলে হয় 2×8<br>
+      (2টি শব্দ, প্রতিটির vector dimension এখন 8 = 4+4)
+    </div>
+
+    <h3>ধাপ ৬ — Linear Transformation (W_output দিয়ে)</h3>
+    <p>Concatenated output-এর dimension টি মূল embedding-এর dimension-এ ফিরিয়ে আনতে হবে। এজন্য একটি linear transformation matrix ব্যবহার করা হয়:</p>
+
+    <div class="matrix-container">
+      <div class="matrix matrix-orange">Z_concat<br>(2×8)</div>
+      <div class="op">×</div>
+      <div class="matrix matrix-green">W_output<br>(8×4)</div>
+      <div class="op">=</div>
+      <div class="matrix matrix-blue">Z_final<br>(2×4)</div>
+    </div>
+
+    <div class="callout callout-green">
+      <div class="callout-title">✅ গুরুত্বপূর্ণ বিষয়</div>
+      Final output-এর shape (2×4) = Input-এর shape (2×4) — একদম মিলে যাচ্ছে!<br>
+      এই W_output matrix-এর weights-ও training-এ শেখা হয়। এটি বিভিন্ন perspective-গুলোর মধ্যে গুরুত্ব নির্ধারণ করে।
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 6: ORIGINAL PAPER -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-yellow">📄</div>
+      <div>
+        <div class="section-num">Section 06</div>
+        <div class="section-title">Original Transformer Paper-এর Implementation</div>
+      </div>
+    </div>
+
+    <p>এখন দেখা যাক "Attention Is All You Need" paper-এ ঠিক কীভাবে Multi-Head Attention implement করা হয়েছে। মূল ধারণা একই, তবে কিছু গুরুত্বপূর্ণ পরিবর্তন আছে।</p>
+
+    <h3>পরিবর্তন ১ — Embedding Dimension: ৫১২</h3>
+
+    <div class="callout callout-blue">
+      <div class="callout-title">📏 Embedding Size</div>
+      Original paper-এ প্রতিটি শব্দের embedding dimension হলো <strong>512</strong>।<br>
+      মানে E_money এবং E_bank উভয়ই 512-dimensional vector।<br>
+      তাই Input Matrix E-এর shape হলো: <strong>2 × 512</strong>
+    </div>
+
+    <h3>পরিবর্তন ২ — 8টি Attention Head</h3>
+
+    <table>
+      <thead>
+        <tr><th>Head</th><th>W_Q Matrix</th><th>W_K Matrix</th><th>W_V Matrix</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Head 1</td><td>W_Q¹ (512×64)</td><td>W_K¹ (512×64)</td><td>W_V¹ (512×64)</td></tr>
+        <tr><td>Head 2</td><td>W_Q² (512×64)</td><td>W_K² (512×64)</td><td>W_V² (512×64)</td></tr>
+        <tr><td>...</td><td>...</td><td>...</td><td>...</td></tr>
+        <tr><td>Head 8</td><td>W_Q⁸ (512×64)</td><td>W_K⁸ (512×64)</td><td>W_V⁸ (512×64)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>পরিবর্তন ৩ — Dimension Reduction: ৫১২ থেকে ৬৪</h3>
+
+    <div class="callout callout-orange">
+      <div class="callout-title">🔑 কেন 512 থেকে 64-তে নামানো হয়?</div>
+      <strong>উত্তর: Computational Efficiency (হিসাব কমানো)</strong><br><br>
+      যদি প্রতিটি Head 512 dimension নিয়ে কাজ করত, তাহলে 8টি Head মিলে অনেক বেশি computation হতো।<br><br>
+      কিন্তু প্রতিটি Head-কে 64 dimension দিলে: 8 × 64 = 512 — মোট computation একই থাকে!<br><br>
+      অর্থাৎ: <strong>512 dimension-এর একটি Self-Attention = 64 dimension-এর 8টি Head-এর Multi-Head Attention</strong><br>
+      কিন্তু পাওয়া যাচ্ছে 8গুণ বেশি perspective!
+    </div>
+
+    <div class="diagram"><span class="comment">Original Transformer Paper-এর সম্পূর্ণ প্রক্রিয়া:</span>
+
+<span class="blue">Step 1: Input</span>
+  E = [E_money, E_bank]    shape: 2 × 512
+
+<span class="blue">Step 2: Linear Projection (প্রতি head-এর জন্য)</span>
+  E (2×512) × W_Q¹ (512×64) = Q¹ (2×64)
+  E (2×512) × W_K¹ (512×64) = K¹ (2×64)
+  E (2×512) × W_V¹ (512×64) = V¹ (2×64)
+  ... (8 heads-এর জন্য একইভাবে)
+
+<span class="blue">Step 3: Self-Attention (8 heads-এ parallel)</span>
+  Z¹ = Attention(Q¹,K¹,V¹)    shape: 2×64
+  Z² = Attention(Q²,K²,V²)    shape: 2×64
+  ...
+  Z⁸ = Attention(Q⁸,K⁸,V⁸)    shape: 2×64
+
+<span class="blue">Step 4: Concatenation</span>
+  Z_concat = [Z¹ || Z² || ... || Z⁸]
+  shape: 2 × (64×8) = 2 × 512
+
+<span class="blue">Step 5: Final Linear Transformation</span>
+  Z_concat (2×512) × W_output (512×512) = Z_final (2×512)
+
+<span class="green">Output: Z_final shape = 2×512 = Input shape ✓</span></div>
+
+    <h3>Shape Summary দেখা যাক:</h3>
+
+    <div class="flow">
+      <div class="flow-item">
+        <div class="label">Input</div>
+        <div class="value">2 × 512</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item">
+        <div class="label">Per Head Q,K,V</div>
+        <div class="value">2 × 64</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item">
+        <div class="label">8 Head Output</div>
+        <div class="value">2 × 64 each</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item">
+        <div class="label">Concatenated</div>
+        <div class="value">2 × 512</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item">
+        <div class="label">Final Output</div>
+        <div class="value">2 × 512</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 7: VISUAL DIAGRAM -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-purple">🎨</div>
+      <div>
+        <div class="section-num">Section 07</div>
+        <div class="section-title">Visual Architecture Diagram</div>
+      </div>
+    </div>
+
+    <h3>Multi-Head Attention-এর সম্পূর্ণ Architecture</h3>
+
+    <div class="diagram"><span class="comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+<span class="comment">                MULTI-HEAD ATTENTION ARCHITECTURE</span>
+<span class="comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+
+INPUT SENTENCE: "Money Bank"
+       │
+       ▼
+┌──────────────┐
+│  Embedding   │  E_money (512-dim), E_bank (512-dim)
+│  Layer       │  Matrix E: shape [2 × 512]
+└──────┬───────┘
+       │
+       ├─────────────────────────────────────┐
+       │                                     │
+       ▼                                     ▼
+<span class="blue">┌─────────────────┐</span>               <span class="purple">┌─────────────────┐</span>
+<span class="blue">│    HEAD 1       │</span>               <span class="purple">│    HEAD 2 ... 8 │</span>
+<span class="blue">│  ┌───┐┌───┐┌───┐│</span>               <span class="purple">│  ┌───┐┌───┐┌───┐│</span>
+<span class="blue">│  │W_Q││W_K││W_V││</span>               <span class="purple">│  │W_Q││W_K││W_V││</span>
+<span class="blue">│  └─┬─┘└─┬─┘└─┬─┘│</span>               <span class="purple">│  └─┬─┘└─┬─┘└─┬─┘│</span>
+<span class="blue">│    │    │    │  │</span>               <span class="purple">│    │    │    │  │</span>
+<span class="blue">│  ┌─▼────▼────▼─┐│</span>               <span class="purple">│  ┌─▼────▼────▼─┐│</span>
+<span class="blue">│  │ Self-Attention│</span>               <span class="purple">│  │ Self-Attention│</span>
+<span class="blue">│  │  Mechanism  ││</span>               <span class="purple">│  │  Mechanism  ││</span>
+<span class="blue">│  └──────┬──────┘│</span>               <span class="purple">│  └──────┬──────┘│</span>
+<span class="blue">│         │  Z¹   │</span>               <span class="purple">│         │  Z²...Z⁸│</span>
+<span class="blue">└─────────┼───────┘</span>               <span class="purple">└─────────┼────────┘</span>
+          │  [2×64]                          │  [2×64 each]
+          └──────────────┬───────────────────┘
+                         │
+                         ▼
+                  <span class="orange">CONCATENATE</span>
+              [Z¹ || Z² || ... || Z⁸]
+                  shape: [2 × 512]
+                         │
+                         ▼
+               <span class="green">┌─────────────────┐</span>
+               <span class="green">│  W_output        │</span>
+               <span class="green">│  (512 × 512)     │</span>
+               <span class="green">│  Linear Layer    │</span>
+               <span class="green">└────────┬─────────┘</span>
+                        │
+                        ▼
+                <span class="highlight">FINAL OUTPUT Z</span>
+                 shape: [2 × 512]
+          (Input-এর মতোই একই shape!)
+
+<span class="comment">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span></div>
+
+    <h3>Self-Attention বনাম Multi-Head Attention — পার্থক্য</h3>
+
+    <div class="diagram"><span class="comment">SELF-ATTENTION (Single Head):</span>
+<span class="comment">───────────────────────────────</span>
+Input E ──→ [W_Q, W_K, W_V] ──→ Attention ──→ Z (2×4)
+                                                 ↑
+                                         একটিই output
+
+<span class="comment">MULTI-HEAD ATTENTION (8 Heads):</span>
+<span class="comment">────────────────────────────────────────────────</span>
+         ┌──→ [W_Q¹,W_K¹,W_V¹] → Attention → Z¹ ──┐
+         │                                           │
+         ├──→ [W_Q²,W_K²,W_V²] → Attention → Z² ──┤
+Input E ─┤                                           ├──→ Concat → W_out → Z_final
+         │    ...                                    │
+         │                                           │
+         └──→ [W_Q⁸,W_K⁸,W_V⁸] → Attention → Z⁸ ──┘
+                                              ↑
+                              আটটি ভিন্ন perspective!</div>
+
+    <h3>Dimension Flow Diagram</h3>
+
+    <div class="diagram"><span class="comment">Embedding থেকে Final Output পর্যন্ত Dimension পরিবর্তন:</span>
+
+Word Embedding: 512-dim
+        │
+        ├──── × W_Q¹ (512×64) ──→  Q¹: 64-dim ─┐
+        ├──── × W_K¹ (512×64) ──→  K¹: 64-dim  │ Head 1
+        └──── × W_V¹ (512×64) ──→  V¹: 64-dim ─┘
+                                        │
+                                   Attention
+                                        │
+                                   Z¹: 64-dim
+                                        │
+        (8টি head একইভাবে 64-dim output দেয়)
+                                        │
+                          ┌─────────────┘
+                    Concat (8 × 64 = 512-dim)
+                          │
+                   × W_out (512×512)
+                          │
+                   Final: 512-dim ✓</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 8: VISUALIZATION DEMO -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-green">👁️</div>
+      <div>
+        <div class="section-num">Section 08</div>
+        <div class="section-title">Visualization Tool Demo বিশ্লেষণ</div>
+      </div>
+    </div>
+
+    <p>Google-এর একটি visualization tool রয়েছে (googleapis.com) যেখানে Multi-Head Attention-এর কাজ চোখে দেখা যায়। এই tool-এ multiple layers-এ multiple heads দেখা যায়।</p>
+
+    <div class="callout callout-blue">
+      <div class="callout-title">🔬 Tool-এ কী দেখা যায়?</div>
+      প্রতিটি শব্দের উপর hover করলে দেখা যায় সেই শব্দটি অন্য কোন শব্দের সাথে কতটুকু similar (attention weight কত)।
+    </div>
+
+    <h3>বাক্য: "The man saw the astronomer with a telescope"</h3>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🔵 Head 0 (Layer 0) — প্রথম দৃষ্টিকোণ</div>
+        <p>যখন "man"-এ focus করা হয়:<br>
+        • "man" → "telescope" সবচেয়ে strong similarity<br>
+        • "man" → "saw" এবং "astronomer" দুর্বল<br><br>
+        <span class="hl-green">ধরা পড়ছে:</span> লোকটি টেলিস্কোপ দিয়ে দেখছে</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🟣 Head 1 (Layer 0) — দ্বিতীয় দৃষ্টিকোণ</div>
+        <p>যখন "man"-এ focus করা হয়:<br>
+        • "man" → "astronomer" সবচেয়ে strong<br>
+        • "astronomer" → "telescope" সবচেয়ে strong<br><br>
+        <span class="hl-orange">ধরা পড়ছে:</span> জ্যোতির্বিদের কাছে টেলিস্কোপ আছে</p>
+      </div>
+    </div>
+
+    <div class="callout callout-green">
+      <div class="callout-title">💡 Visualization থেকে শিক্ষা</div>
+      একই বাক্যে দুটো ভিন্ন Head দুটো ভিন্ন অর্থ capture করছে। Head 0 একটি interpretation ধরছে, Head 1 আরেকটি ধরছে। এভাবেই Multi-Head Attention বাক্যের সমৃদ্ধ অর্থ বোঝে।
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 9: W_OUTPUT ROLE -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-blue">🔗</div>
+      <div>
+        <div class="section-num">Section 09</div>
+        <div class="section-title">W_output Matrix-এর ভূমিকা</div>
+      </div>
+    </div>
+
+    <p>W_output বা Linear Transformation matrix শুধু dimension কমায় না — এটি আরও একটি গুরুত্বপূর্ণ কাজ করে।</p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🎯 কাজ ১ — Dimension ঠিক করা</div>
+        <p>2×512 → 2×512 (same shape রাখা, অথবা প্রয়োজনমতো বদলানো)</p>
+      </div>
+      <div class="card">
+        <div class="card-title">⚖️ কাজ ২ — Importance Weighting</div>
+        <p>বিভিন্ন head-এর output-এর গুরুত্ব নির্ধারণ করে — কোন perspective বেশি important?</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🔀 কাজ ৩ — Perspective Mixing</div>
+        <p>বিভিন্ন perspective-এর একটি সমন্বিত (blended) representation তৈরি করে</p>
+      </div>
+      <div class="card">
+        <div class="card-title">📚 কাজ ৪ — Training-এ Learnable</div>
+        <p>এই weights-ও backpropagation-এ শেখা হয় — তাই সময়ের সাথে optimize হয়</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 10: COMPLETE SUMMARY -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-green">📋</div>
+      <div>
+        <div class="section-num">Section 10</div>
+        <div class="section-title">সম্পূর্ণ Summary ও মূল বিষয়গুলো</div>
+      </div>
+    </div>
+
+    <h3>Multi-Head Attention-এর পুরো প্রক্রিয়া এক নজরে</h3>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">১</div>
+        <div class="step-content">
+          <h4>Input Embedding</h4>
+          <p>বাক্যের প্রতিটি শব্দের Static Embedding নাও (word2vec বা অনুরূপ মডেল থেকে)</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">২</div>
+        <div class="step-content">
+          <h4>Multiple Weight Sets তৈরি করো</h4>
+          <p>h সংখ্যক Head-এর জন্য h সেট W_Q, W_K, W_V matrix তৈরি করো (সব learnable)</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৩</div>
+        <div class="step-content">
+          <h4>Linear Projection (Dimension Reduction)</h4>
+          <p>প্রতিটি Head-এর জন্য: Embedding × W_Q/W_K/W_V → reduced dimension-এ Q, K, V পাও</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৪</div>
+        <div class="step-content">
+          <h4>Parallel Self-Attention</h4>
+          <p>h সংখ্যক Self-Attention একসাথে parallel-এ চালাও → প্রতিটি থেকে একটি করে Contextual Output পাও</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৫</div>
+        <div class="step-content">
+          <h4>Concatenation</h4>
+          <p>সব Head-এর output জুড়ে দাও → একটি বড় combined matrix পাও</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৬</div>
+        <div class="step-content">
+          <h4>Final Linear Transformation</h4>
+          <p>W_output দিয়ে final dimension-এ আনো → এটাই Multi-Head Attention-এর চূড়ান্ত output</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-purple">
+      <div class="callout-title">🏆 Best of Both Worlds!</div>
+      Multi-Head Attention ব্যবহার করলে:
+      <br>• <strong>Computation</strong>: একটি 512-dim Self-Attention-এর সমান (একটু বেশি না)
+      <br>• <strong>Capability</strong>: 8টি ভিন্ন perspective capture করার ক্ষমতা
+      <br>• <strong>Learning</strong>: প্রতিটি Head আলাদা linguistic pattern শেখে
+      <br><br>
+      অর্থাৎ তুমি একই computation খরচ করে অনেক বেশি তথ্য capture করতে পারছ!
+    </div>
+
+    <h3>Key Terms মনে রাখার জন্য</h3>
+
+    <table>
+      <thead>
+        <tr><th>Term</th><th>বাংলায় মানে</th><th>Role</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Head</td><td>একটি Self-Attention মডিউল</td><td>একটি perspective capture করে</td></tr>
+        <tr><td>W_Q, W_K, W_V</td><td>Query, Key, Value Weight Matrix</td><td>Embedding থেকে Q/K/V বের করে</td></tr>
+        <tr><td>Q, K, V</td><td>Query, Key, Value Vector</td><td>Attention calculation-এ ব্যবহার হয়</td></tr>
+        <tr><td>Attention Weight</td><td>মনোযোগের মাত্রা</td><td>কোন শব্দ কতটুকু important সেটা বলে</td></tr>
+        <tr><td>Z (output)</td><td>Contextual Embedding</td><td>Context-aware representation</td></tr>
+        <tr><td>W_output</td><td>আউটপুট Weight Matrix</td><td>Heads-এর output mix করে</td></tr>
+        <tr><td>Concatenation</td><td>জুড়ে দেওয়া</td><td>সব head-এর output একত্রিত করা</td></tr>
+        <tr><td>d_k</td><td>Key Dimension</td><td>Scaling factor (√d_k দিয়ে ভাগ)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+</body>
+</html>

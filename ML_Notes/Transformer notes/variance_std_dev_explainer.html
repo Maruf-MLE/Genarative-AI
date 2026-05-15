@@ -1,0 +1,264 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.section { margin: 1.5rem 0; }
+.card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+.label { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px; }
+.value { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 500; }
+.badge-blue { background: var(--color-background-info); color: var(--color-text-info); }
+.badge-amber { background: #FAEEDA; color: #854F0B; }
+.badge-green { background: #EAF3DE; color: #3B6D11; }
+.step-row { display: flex; align-items: flex-start; gap: 12px; margin: 10px 0; }
+.step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--color-background-info); color: var(--color-text-info); font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step-text { font-size: 14px; color: var(--color-text-primary); line-height: 1.6; padding-top: 4px; }
+.highlight { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 2px 8px; font-weight: 500; }
+.big-formula { font-size: 15px; font-weight: 500; background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 16px; border-left: 3px solid #378ADD; margin: 10px 0; color: var(--color-text-primary); }
+.dot-row { display: flex; align-items: flex-end; gap: 8px; margin: 1rem 0; }
+.dot { border-radius: 50%; background: #378ADD; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 500; flex-shrink: 0; transition: all 0.3s; }
+.mean-line { width: 3px; background: #E24B4A; align-self: stretch; border-radius: 2px; position: relative; }
+.tab-row { display: flex; gap: 6px; margin-bottom: 1rem; }
+.tab { padding: 6px 14px; border-radius: 99px; font-size: 13px; cursor: pointer; border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-secondary); transition: all 0.2s; }
+.tab.active { background: var(--color-background-info); color: var(--color-text-info); border-color: transparent; font-weight: 500; }
+.panel { display: none; } .panel.active { display: block; }
+.bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 140px; padding: 0 4px; position: relative; }
+.bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.bar { width: 100%; border-radius: 4px 4px 0 0; transition: all 0.4s; position: relative; }
+.bar-val { font-size: 11px; font-weight: 500; color: var(--color-text-primary); }
+.bar-lbl { font-size: 11px; color: var(--color-text-secondary); }
+.mean-bar-line { position: absolute; left: 0; right: 0; border-top: 2px dashed #E24B4A; z-index: 2; }
+.diff-arrow { font-size: 11px; color: #D85A30; font-weight: 500; }
+.comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cmp-box { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 12px; }
+.tag { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; display: inline-block; margin-bottom: 8px; }
+</style>
+
+<div style="padding: 0.5rem 0;">
+
+<div class="tab-row">
+  <button class="tab active" onclick="showTab('concept')">ধারণা</button>
+  <button class="tab" onclick="showTab('calc')">হিসাব করি</button>
+  <button class="tab" onclick="showTab('ml')">ML/AI তে কেন</button>
+  <button class="tab" onclick="showTab('compare')">দুটোর পার্থক্য</button>
+</div>
+
+<!-- CONCEPT TAB -->
+<div id="tab-concept" class="panel active">
+  <div class="card">
+    <div style="font-size:15px;font-weight:500;margin-bottom:10px;">🎯 Mean (গড়) আগে বুঝি</div>
+    <div style="font-size:14px;line-height:1.7;color:var(--color-text-primary);">
+      ধরো ৫ জন বন্ধুর বয়স: <span class="highlight">10, 12, 14, 16, 18</span><br>
+      Mean = সব যোগ করে সংখ্যা দিয়ে ভাগ = (10+12+14+16+18) ÷ 5 = <span class="highlight" style="color:#185FA5;">14</span><br><br>
+      Mean মানে হলো — <strong>সবার "মাঝামাঝি" একটা জায়গা।</strong> ক্লাসের সবার মার্ক যদি ৫০ করে হয়, মিন ৫০।
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:15px;font-weight:500;margin-bottom:10px;">❓ Variance কী?</div>
+    <div style="font-size:14px;line-height:1.7;color:var(--color-text-primary);">
+      Mean জানার পর প্রশ্ন হলো — <em>ডেটাগুলো Mean থেকে কতটা দূরে ছড়িয়ে আছে?</em><br><br>
+      নিচের দুই ক্লাসের মার্ক দেখো:
+    </div>
+    <div class="comparison" style="margin-top:12px;">
+      <div class="cmp-box">
+        <div class="tag" style="background:#EAF3DE;color:#3B6D11;">ক্লাস A</div>
+        <div style="font-size:13px;font-weight:500;">49, 50, 50, 51, 50</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;">Mean = 50</div>
+        <div style="margin-top:8px;font-size:13px;">সবাই Mean এর <strong>কাছাকাছি</strong> 🟢</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Variance = ছোট</div>
+      </div>
+      <div class="cmp-box">
+        <div class="tag" style="background:#FAECE7;color:#993C1D;">ক্লাস B</div>
+        <div style="font-size:13px;font-weight:500;">20, 35, 50, 70, 75</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;">Mean = 50</div>
+        <div style="margin-top:8px;font-size:13px;">সবাই Mean থেকে <strong>অনেক দূরে</strong> 🔴</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">Variance = বড়</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-size:14px;color:var(--color-text-primary);">
+      দুই ক্লাসেরই Mean = 50, কিন্তু ছড়িয়ে থাকার পরিমাণ আলাদা — এটাই Variance পরিমাপ করে!
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:15px;font-weight:500;margin-bottom:10px;">📏 Standard Deviation কী?</div>
+    <div style="font-size:14px;line-height:1.7;color:var(--color-text-primary);">
+      Variance-এর একটা সমস্যা আছে — এটা <strong>বর্গ (squared)</strong> এককে থাকে।<br>
+      মার্ক হলে Variance হয় "marks²" — এটা বোঝা কঠিন।<br><br>
+      তাই Variance-এর <strong>বর্গমূল (√)</strong> নিলে পাই <strong>Standard Deviation</strong> — এটা মূল এককেই থাকে (marks-এ)!<br><br>
+      <span style="color:#185FA5;font-weight:500;">SD = √Variance</span><br><br>
+      সহজ কথায়: <em>"গড়ে প্রতিটি ডেটা, Mean থেকে কতটা দূরে?"</em>
+    </div>
+  </div>
+</div>
+
+<!-- CALC TAB -->
+<div id="tab-calc" class="panel">
+  <div class="card">
+    <div style="font-size:15px;font-weight:500;margin-bottom:4px;">উদাহরণ: ৫ জনের মার্ক</div>
+    <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:14px;">ডেটা: 10, 20, 30, 40, 50</div>
+
+    <div class="step-row">
+      <div class="step-num">১</div>
+      <div class="step-text"><strong>Mean বের করো</strong><br>
+        (10 + 20 + 30 + 40 + 50) ÷ 5 = <span class="highlight" style="color:#185FA5;">30</span>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num">২</div>
+      <div class="step-text"><strong>প্রতিটি থেকে Mean বাদ দাও</strong><br>
+        10−30=<span style="color:#E24B4A;font-weight:500;">−20</span> &nbsp;
+        20−30=<span style="color:#E24B4A;font-weight:500;">−10</span> &nbsp;
+        30−30=<span style="color:#185FA5;font-weight:500;">0</span> &nbsp;
+        40−30=<span style="color:#3B6D11;font-weight:500;">+10</span> &nbsp;
+        50−30=<span style="color:#3B6D11;font-weight:500;">+20</span>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num">৩</div>
+      <div class="step-text"><strong>বর্গ করো (negative দূর হয়)</strong><br>
+        400 + 100 + 0 + 100 + 400 = <span class="highlight">1000</span>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num">৪</div>
+      <div class="step-text"><strong>গড় নাও → এটাই Variance</strong><br>
+        1000 ÷ 5 = <span class="highlight" style="color:#D85A30;font-weight:600;">Variance = 200</span>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num">৫</div>
+      <div class="step-text"><strong>বর্গমূল নাও → Standard Deviation</strong><br>
+        √200 ≈ <span class="highlight" style="color:#185FA5;font-weight:600;">SD ≈ 14.14</span><br>
+        <span style="font-size:13px;color:var(--color-text-secondary);">মানে: গড়ে প্রতিটি ডেটা Mean থেকে ~14 দূরে!</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card" style="text-align:center;">
+      <div class="label">Variance</div>
+      <div class="value" style="color:#D85A30;">200</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;">marks² এককে</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div class="label">Standard Deviation</div>
+      <div class="value" style="color:#185FA5;">≈ 14.14</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;">marks এককে</div>
+    </div>
+  </div>
+
+  <div class="big-formula">
+    Variance = Σ(xᵢ − mean)² ÷ n<br>
+    <span style="font-size:13px;font-weight:400;color:var(--color-text-secondary);">Standard Deviation = √Variance</span>
+  </div>
+</div>
+
+<!-- ML TAB -->
+<div id="tab-ml" class="panel">
+  <div class="card">
+    <div style="font-size:15px;font-weight:500;margin-bottom:10px;">🤖 ML/AI তে Variance ও SD কেন দরকার?</div>
+
+    <div style="border-left:3px solid #1D9E75;padding-left:12px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:500;color:#0F6E56;margin-bottom:4px;">১. Feature Scaling (Normalization)</div>
+      <div style="font-size:13px;color:var(--color-text-primary);line-height:1.6;">
+        বয়স (1–100) আর বেতন (10,000–1,00,000) এক সাথে model দিলে বেতন বেশি প্রভাব ফেলে।<br>
+        SD দিয়ে সব feature-কে একই scale-এ আনা হয় → <strong>Standardization</strong><br>
+        <span style="font-size:12px;color:var(--color-text-secondary);">formula: z = (x − mean) / SD</span>
+      </div>
+    </div>
+
+    <div style="border-left:3px solid #378ADD;padding-left:12px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:500;color:#185FA5;margin-bottom:4px;">২. Outlier ধরা</div>
+      <div style="font-size:13px;color:var(--color-text-primary);line-height:1.6;">
+        কোনো value যদি Mean থেকে 3×SD দূরে থাকে — সেটা সম্ভবত outlier।<br>
+        Fraud detection, anomaly detection এ এটা কাজে লাগে।
+      </div>
+    </div>
+
+    <div style="border-left:3px solid #BA7517;padding-left:12px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:500;color:#854F0B;margin-bottom:4px;">৩. Model Performance বোঝা</div>
+      <div style="font-size:13px;color:var(--color-text-primary);line-height:1.6;">
+        Model-এর error বা loss কতটা ছড়িয়ে আছে সেটা SD দিয়ে বোঝা যায়।<br>
+        Variance বড় = model অনিশ্চিত, Variance ছোট = model stable।
+      </div>
+    </div>
+
+    <div style="border-left:3px solid #534AB7;padding-left:12px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:500;color:#3C3489;margin-bottom:4px;">৪. Bias-Variance Tradeoff</div>
+      <div style="font-size:13px;color:var(--color-text-primary);line-height:1.6;">
+        ML-এর সবচেয়ে গুরুত্বপূর্ণ concept! Model-এর Variance বেশি হলে → <strong>Overfitting</strong><br>
+        অর্থাৎ training data মুখস্থ করে, new data-তে ব্যর্থ হয়।
+      </div>
+    </div>
+
+    <div style="border-left:3px solid #D85A30;padding-left:12px;">
+      <div style="font-size:13px;font-weight:500;color:#993C1D;margin-bottom:4px;">৫. Gaussian / Normal Distribution</div>
+      <div style="font-size:13px;color:var(--color-text-primary);line-height:1.6;">
+        Neural network-এর weight initialization, Naive Bayes, Gaussian Mixture Model — সবকিছুতে<br>
+        Mean ও SD দিয়ে data distribution describe করা হয়।
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARE TAB -->
+<div id="tab-compare" class="panel">
+  <div class="comparison" style="margin-bottom:12px;">
+    <div class="card">
+      <div class="tag" style="background:#FAEEDA;color:#854F0B;">Variance</div>
+      <div style="font-size:13px;line-height:1.7;color:var(--color-text-primary);">
+        • বর্গ এককে থাকে<br>
+        • বড় সংখ্যা হয়<br>
+        • সরাসরি বোঝা কঠিন<br>
+        • Math-এ বেশি ব্যবহার হয়<br>
+        • দূরত্ব² পরিমাপ করে
+      </div>
+    </div>
+    <div class="card">
+      <div class="tag" style="background:#E6F1FB;color:#185FA5;">Standard Deviation</div>
+      <div style="font-size:13px;line-height:1.7;color:var(--color-text-primary);">
+        • মূল এককে থাকে<br>
+        • ছোট সংখ্যা হয়<br>
+        • সহজে বোঝা যায়<br>
+        • Practical কাজে বেশি<br>
+        • গড় দূরত্ব পরিমাপ করে
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:14px;font-weight:500;margin-bottom:10px;">সহজ মনে রাখার উপায় 💡</div>
+    <div style="font-size:14px;line-height:1.8;color:var(--color-text-primary);">
+      <strong>Mean</strong> = ডেটার কেন্দ্র<br>
+      <strong>Variance</strong> = কেন্দ্র থেকে দূরত্বের বর্গের গড়<br>
+      <strong>SD</strong> = Variance এর বর্গমূল → "গড় দূরত্ব"<br><br>
+      <span style="color:var(--color-text-secondary);font-size:13px;">
+      উদাহরণ: তোমার ক্লাসের সবার বয়স যদি 20±1 হয় → SD ছোট (সবাই কাছাকাছি)<br>
+      কিন্তু বয়স যদি 5 থেকে 60 পর্যন্ত হয় → SD বড় (অনেক ছড়িয়ে)
+      </span>
+    </div>
+  </div>
+
+  <button onclick="window.sendPrompt('Bias-Variance Tradeoff ML এ কীভাবে কাজ করে সহজ বাংলায় বোঝাও')" style="width:100%;padding:10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary);font-size:13px;cursor:pointer;text-align:left;">
+    ➡ Bias-Variance Tradeoff আরো বিস্তারিত বোঝাও ↗
+  </button>
+</div>
+
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>

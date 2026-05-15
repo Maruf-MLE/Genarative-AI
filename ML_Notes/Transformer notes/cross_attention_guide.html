@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cross Attention — Transformer আর্কিটেকচার গাইড</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:wght@700;900&display=swap');
+
+  :root {
+    --bg: #0a0d14;
+    --bg2: #111520;
+    --bg3: #161b2e;
+    --accent: #5b8af5;
+    --accent2: #a78bfa;
+    --accent3: #34d399;
+    --accent4: #f59e0b;
+    --accent5: #f87171;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --border: #1e2a45;
+    --card: #131824;
+    --card2: #0f1520;
+    --glow: rgba(91,138,245,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans Bengali', sans-serif;
+    font-size: 16px;
+    line-height: 1.9;
+    min-height: 100vh;
+  }
+
+  /* ── Cover ── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px 40px;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(91,138,245,0.18) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(167,139,250,0.12) 0%, transparent 60%),
+                var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%235b8af5' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .cover-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(91,138,245,0.2), rgba(167,139,250,0.2));
+    border: 1px solid rgba(91,138,245,0.3);
+    border-radius: 30px;
+    padding: 6px 20px;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--accent2);
+    margin-bottom: 32px;
+    text-transform: uppercase;
+  }
+  .cover h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(48px, 8vw, 96px);
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+  .cover-sub {
+    font-size: 22px;
+    color: var(--accent3);
+    font-weight: 600;
+    margin-bottom: 24px;
+    letter-spacing: 1px;
+  }
+  .cover p {
+    max-width: 620px;
+    color: var(--text2);
+    font-size: 17px;
+    line-height: 1.8;
+  }
+  .cover-meta {
+    margin-top: 48px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .meta-item {
+    text-align: center;
+  }
+  .meta-item .val {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .meta-item .lbl {
+    font-size: 12px;
+    color: var(--text2);
+    letter-spacing: 1px;
+  }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 60px 32px;
+  }
+
+  /* ── Section Header ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .icon-blue { background: linear-gradient(135deg, rgba(91,138,245,0.3), rgba(91,138,245,0.1)); border: 1px solid rgba(91,138,245,0.3); }
+  .icon-purple { background: linear-gradient(135deg, rgba(167,139,250,0.3), rgba(167,139,250,0.1)); border: 1px solid rgba(167,139,250,0.3); }
+  .icon-green { background: linear-gradient(135deg, rgba(52,211,153,0.3), rgba(52,211,153,0.1)); border: 1px solid rgba(52,211,153,0.3); }
+  .icon-amber { background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(245,158,11,0.1)); border: 1px solid rgba(245,158,11,0.3); }
+  .icon-red { background: linear-gradient(135deg, rgba(248,113,113,0.3), rgba(248,113,113,0.1)); border: 1px solid rgba(248,113,113,0.3); }
+
+  .section-header h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .section-header .sec-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text2);
+    letter-spacing: 2px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+  }
+  .card-highlight {
+    background: linear-gradient(135deg, rgba(91,138,245,0.08), rgba(167,139,250,0.05));
+    border: 1px solid rgba(91,138,245,0.25);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-highlight::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--accent), var(--accent2));
+    border-radius: 4px 0 0 4px;
+  }
+
+  .card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 14px;
+  }
+  .card p { color: var(--text2); margin-bottom: 12px; }
+  .card p:last-child { margin-bottom: 0; }
+
+  /* ── Definition Box ── */
+  .definition-box {
+    background: linear-gradient(135deg, rgba(52,211,153,0.08), rgba(52,211,153,0.03));
+    border: 1px solid rgba(52,211,153,0.3);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 28px;
+  }
+  .definition-box .def-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent3);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .definition-box p {
+    font-size: 17px;
+    color: var(--text);
+    line-height: 1.9;
+  }
+
+  /* ── Step ── */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: flex;
+    gap: 24px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .step:last-child { border-bottom: none; }
+  .step-num {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    font-weight: 800;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(91,138,245,0.3);
+  }
+  .step-content h4 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .step-content p { color: var(--text2); font-size: 15px; line-height: 1.8; }
+
+  /* ── Compare Table ── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  .compare-col {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .compare-col-header {
+    padding: 16px 20px;
+    font-weight: 700;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .self-header { background: linear-gradient(135deg, rgba(91,138,245,0.2), rgba(91,138,245,0.05)); color: var(--accent); }
+  .cross-header { background: linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.05)); color: var(--accent2); }
+  .compare-row {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .compare-row span { color: #fff; font-weight: 600; display: block; font-size: 13px; margin-bottom: 3px; }
+
+  /* ── ASCII Diagram ── */
+  .diagram-wrap {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .diagram-header {
+    padding: 12px 20px;
+    background: rgba(91,138,245,0.08);
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+  .diagram-body {
+    padding: 28px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text2);
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .d-blue { color: var(--accent); }
+  .d-purple { color: var(--accent2); }
+  .d-green { color: var(--accent3); }
+  .d-amber { color: var(--accent4); }
+  .d-red { color: var(--accent5); }
+  .d-white { color: #fff; }
+
+  /* ── Tag Pills ── */
+  .tag-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .tag {
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .tag-blue { background: rgba(91,138,245,0.15); border: 1px solid rgba(91,138,245,0.3); color: var(--accent); }
+  .tag-purple { background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.3); color: var(--accent2); }
+  .tag-green { background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.3); color: var(--accent3); }
+  .tag-amber { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); color: var(--accent4); }
+
+  /* ── Math Box ── */
+  .math-box {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--accent3);
+    text-align: center;
+  }
+  .math-box .math-label {
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+    font-family: 'Noto Sans Bengali', sans-serif;
+  }
+
+  /* ── Use Case Grid ── */
+  .use-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .use-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .use-card:hover { border-color: var(--accent); }
+  .use-icon { font-size: 28px; margin-bottom: 10px; }
+  .use-card h4 { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .use-card p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  /* ── Separator ── */
+  .sep {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 60px 0;
+  }
+
+  /* ── Callout ── */
+  .callout {
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+  .callout-blue { background: rgba(91,138,245,0.08); border: 1px solid rgba(91,138,245,0.2); }
+  .callout-amber { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
+  .callout-green { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); }
+  .callout p { color: var(--text2); font-size: 15px; line-height: 1.8; margin: 0; }
+  .callout strong { color: #fff; }
+
+  /* ── Highlight Inline ── */
+  .hl-blue { color: var(--accent); font-weight: 600; }
+  .hl-green { color: var(--accent3); font-weight: 600; }
+  .hl-purple { color: var(--accent2); font-weight: 600; }
+  .hl-amber { color: var(--accent4); font-weight: 600; }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 40px;
+    color: var(--text2);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin: 40px 0;
+  }
+  .toc h3 { font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 18px; letter-spacing: 1px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { color: var(--text2); padding: 6px 0; font-size: 15px; }
+  .toc li span { color: var(--text); }
+
+  /* ── Weight Matrix ── */
+  .weight-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    margin: 16px 0;
+  }
+  .weight-table th {
+    background: rgba(91,138,245,0.1);
+    color: var(--accent);
+    padding: 10px 16px;
+    text-align: center;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .weight-table td {
+    padding: 10px 16px;
+    text-align: center;
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .weight-table td.high { color: var(--accent3); font-weight: 700; }
+  .weight-table td.med { color: var(--accent4); }
+  .weight-table td.low { color: var(--text2); }
+  .weight-table tr:hover td { background: rgba(91,138,245,0.04); }
+
+  @media print {
+    body { background: #fff; color: #111; }
+    .cover { background: linear-gradient(135deg, #1a237e, #283593); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════ COVER ════════ -->
+<div class="cover">
+  <div class="cover-badge">Transformer Architecture Series</div>
+  <h1>Cross Attention</h1>
+  <div class="cover-sub">ক্রস অ্যাটেনশন — সম্পূর্ণ বাংলা টেকনিক্যাল গাইড</div>
+  <p>Transformer Decoder-এর সবচেয়ে গুরুত্বপূর্ণ কম্পোনেন্ট — দুটি আলাদা Sequence-এর মধ্যে সম্পর্ক নির্ণয়ের পদ্ধতি, ধাপে ধাপে বাংলায় ব্যাখ্যা।</p>
+  <div class="cover-meta">
+    <div class="meta-item">
+      <div class="val">৫+</div>
+      <div class="lbl">SECTIONS</div>
+    </div>
+    <div class="meta-item">
+      <div class="val">Q, K, V</div>
+      <div class="lbl">VECTORS</div>
+    </div>
+    <div class="meta-item">
+      <div class="val">Seq2Seq</div>
+      <div class="lbl">TASKS</div>
+    </div>
+    <div class="meta-item">
+      <div class="val">১০০%</div>
+      <div class="lbl">BANGLA</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ BODY ════════ -->
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>📋 সূচিপত্র</h3>
+    <ol>
+      <li><span>🎯 সহজ ভাষায় পরিচিতি — Cross Attention কী এবং কেন দরকার?</span></li>
+      <li><span>📖 বিস্তারিত ব্যাখ্যা — Self Attention vs Cross Attention</span></li>
+      <li><span>⚙️ Cross Attention-এর কাজের প্রক্রিয়া — ধাপে ধাপে</span></li>
+      <li><span>📊 Input, Processing ও Output — তিনটি পার্থক্য</span></li>
+      <li><span>🔗 Bahdanau ও Luong Attention-এর সাথে সম্পর্ক</span></li>
+      <li><span>🎨 Visual Diagrams — ASCII আর্ট ও ফ্লোচার্ট</span></li>
+      <li><span>🌐 Cross Attention কোথায় কোথায় ব্যবহার হয়?</span></li>
+    </ol>
+  </div>
+
+  <!-- ══════════ SECTION 1 ══════════ -->
+  <div class="section-header">
+    <div class="section-icon icon-blue">🎯</div>
+    <div>
+      <div class="sec-num">SECTION 01</div>
+      <h2>সহজ ভাষায় পরিচিতি (Intuition)</h2>
+    </div>
+  </div>
+
+  <div class="card-highlight">
+    <h3>Cross Attention কী সমস্যা সমাধান করে?</h3>
+    <p>মনে করো তুমি একটি ইংরেজি বাক্য হিন্দিতে অনুবাদ করছ। তুমি যখন হিন্দিতে একটি নতুন শব্দ লিখতে যাবে, তখন তোমার দুটি জিনিস জানা দরকার:</p>
+    <p><span class="hl-blue">① এখন পর্যন্ত হিন্দিতে কী কী লিখেছ?</span> — এটি জানায় <strong>Self Attention</strong></p>
+    <p><span class="hl-green">② মূল ইংরেজি বাক্যে কী লেখা ছিল?</span> — এটি জানায় <strong>Cross Attention</strong></p>
+    <p>Cross Attention হল সেই যন্ত্র যা দুটো আলাদা ভাষার (বা দুটো আলাদা Sequence-এর) মধ্যে সম্পর্ক খুঁজে বের করে।</p>
+  </div>
+
+  <div class="card">
+    <h3>🍛 রান্নাঘরের উদাহরণ দিয়ে বোঝো</h3>
+    <p>মনে করো একজন রাঁধুনি <strong>রেসিপি বই</strong> দেখে রান্না করছেন। তিনি যখন পরের ধাপে যাচ্ছেন, তখন তিনি দুটো জিনিস দেখছেন:</p>
+    <p>① <span class="hl-blue">এখন পর্যন্ত কী রান্না হয়েছে</span> (নিজের থালায় কী আছে) → Self Attention</p>
+    <p>② <span class="hl-green">রেসিপি বইতে এই মুহূর্তে কোন নির্দেশনা প্রযোজ্য</span> → Cross Attention</p>
+    <p>Cross Attention হল সেই দেখার প্রক্রিয়া যেখানে "আমি এখন কোন হিন্দি শব্দ লিখব" তা নির্ভর করছে "ইংরেজির কোন শব্দটির সাথে এটির মিল সবচেয়ে বেশি" তার উপর।</p>
+  </div>
+
+  <div class="definition-box">
+    <span class="def-label">📌 সংজ্ঞা (Definition)</span>
+    <p><strong>Cross Attention</strong> হল Transformer আর্কিটেকচারে ব্যবহৃত একটি Mechanism যা বিশেষভাবে Sequence-to-Sequence কাজে (যেমন Translation, Summarization) ব্যবহৃত হয়। এটি একটি Model-কে Output Sequence জেনারেট করার সময় Input Sequence-এর বিভিন্ন অংশে মনোযোগ দিতে সক্ষম করে।</p>
+  </div>
+
+  <div class="callout callout-blue">
+    <div class="callout-icon">💡</div>
+    <p><strong>মূল কথা:</strong> যখন তুমি একই Sequence-এর ভেতরে শব্দের মধ্যে সম্পর্ক খোঁজো → <span class="hl-blue">Self Attention</span>। যখন দুটো আলাদা Sequence-এর শব্দগুলোর মধ্যে সম্পর্ক খোঁজো → <span class="hl-purple">Cross Attention</span>।</p>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ SECTION 2 ══════════ -->
+  <div class="section-header">
+    <div class="section-icon icon-purple">📖</div>
+    <div>
+      <div class="sec-num">SECTION 02</div>
+      <h2>Transformer-এ Cross Attention-এর অবস্থান</h2>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Encoder-Decoder আর্কিটেকচারে Cross Attention</h3>
+    <p>Transformer-এর Decoder-এ মোট <span class="hl-blue">তিনটি</span> প্রধান ব্লক থাকে:</p>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-header">DECODER ARCHITECTURE — Cross Attention-এর অবস্থান</div>
+    <div class="diagram-body"><span class="d-white">┌─────────────────────────────────────────────────────┐
+│                   DECODER BLOCK                     │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  ① Masked Multi-Head Self Attention           │  │
+│  │     (ডিকোডারের নিজের শব্দগুলোর মধ্যে সম্পর্ক) │  │
+│  └───────────────────┬───────────────────────────┘  │
+│                      │                             │
+│  ┌───────────────────▼───────────────────────────┐  │
+│  │  ② </span><span class="d-purple">Cross Attention (Multi-Head)      ◄── আজকের বিষয়</span><span class="d-white"> │  │
+│  │                                               │  │
+│  │    </span><span class="d-blue">Query (Q) ←── Decoder থেকে আসে</span><span class="d-white">           │  │
+│  │    </span><span class="d-green">Key   (K) ←── Encoder থেকে আসে</span><span class="d-white">           │  │
+│  │    </span><span class="d-amber">Value (V) ←── Encoder থেকে আসে</span><span class="d-white">           │  │
+│  └───────────────────┬───────────────────────────┘  │
+│                      │                             │
+│  ┌───────────────────▼───────────────────────────┐  │
+│  │  ③ Feed Forward Network                      │  │
+│  └───────────────────────────────────────────────┘  │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+
+    ↑                              ↑
+ Decoder                       Encoder
+(Hindi words)               (English words)
+(Query আসে)              (Key, Value আসে)</span>
+    </div>
+  </div>
+
+  <div class="callout callout-amber">
+    <div class="callout-icon">⚠️</div>
+    <p><strong>গুরুত্বপূর্ণ পার্থক্য:</strong> সাধারণ Multi-Head Attention-এ তিনটি Arrow (Q, K, V) একই জায়গা থেকে আসে। কিন্তু Cross Attention-এ <strong>Q আসে Decoder থেকে</strong> এবং <strong>K ও V আসে Encoder থেকে</strong> — এটাই সবচেয়ে বড় পার্থক্য।</p>
+  </div>
+
+  <div class="card">
+    <h3>Machine Translation উদাহরণ: "I like eating ice cream" → হিন্দিতে</h3>
+    <p><strong>Encoder-এর কাজ:</strong> "I like eating ice cream" ইংরেজি বাক্যটি ভালোভাবে বোঝা এবং তার সারাংশ/Central Idea ডিকোডারের কাছে পাঠানো।</p>
+    <p><strong>Decoder-এর কাজ:</strong> Encoder থেকে পাওয়া তথ্যের ভিত্তিতে হিন্দি বাক্য জেনারেট করা — একটি একটি করে শব্দ।</p>
+    <p>Decoder কাজ করে <span class="hl-blue">Auto-regressive fashion</span>-এ:</p>
+    <div class="tag-list">
+      <span class="tag tag-blue">Time Step 1 → "मुझे"</span>
+      <span class="tag tag-purple">Time Step 2 → "आइसक्रीम"</span>
+      <span class="tag tag-green">Time Step 3 → "खाना"</span>
+      <span class="tag tag-amber">Time Step 4 → "पसंद"</span>
+      <span class="tag tag-blue">Time Step 5 → "है"</span>
+    </div>
+  </div>
+
+  <div class="card-highlight">
+    <h3>পরবর্তী শব্দ নির্ভর করে দুটি জিনিসের উপর</h3>
+    <p><span class="hl-blue">① এখন পর্যন্ত Decoder কী Generate করেছে?</span><br>
+    যেমন "मुझे" এবং "आइसक्रीम" আগে আসলে পরের শব্দ "खाना" হওয়া স্বাভাবিক।<br>
+    এই তথ্য দেয় → <strong>Self Attention</strong></p>
+    <p><span class="hl-green">② Input Sentence-এ (ইংরেজিতে) কী লেখা ছিল?</span><br>
+    Encoder থেকে কী Information আসছে?<br>
+    এই তথ্য দেয় → <strong>Cross Attention</strong></p>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ SECTION 3 ══════════ -->
+  <div class="section-header">
+    <div class="section-icon icon-green">⚙️</div>
+    <div>
+      <div class="sec-num">SECTION 03</div>
+      <h2>Cross Attention কীভাবে কাজ করে — ধাপে ধাপে</h2>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>প্রথমে Self Attention-এর পুনরালোচনা (Revision)</h3>
+    <p>Cross Attention বুঝতে হলে আগে Self Attention মনে করতে হবে। Self Attention ও Cross Attention কনসেপ্চুয়ালি অনেকটা একই রকম।</p>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-header">SELF ATTENTION — Working Process</div>
+    <div class="diagram-body"><span class="d-white">Input Sequence: "We are friends"
+
+</span><span class="d-blue">Step 1: প্রতিটি শব্দের জন্য Embedding তৈরি</span><span class="d-white">
+  We  ──► [e₁]
+  are ──► [e₂]  (Embedding বা Contextual Embedding)
+  friends ──► [e₃]
+
+</span><span class="d-green">Step 2: তিনটি Weight Matrix দিয়ে Q, K, V তৈরি</span><span class="d-white">
+  W_Q, W_K, W_V (তিনটি Learnable Matrix)
+
+  [e₁] × W_Q = </span><span class="d-blue">Q_we</span><span class="d-white">    [e₁] × W_K = </span><span class="d-green">K_we</span><span class="d-white">    [e₁] × W_V = </span><span class="d-amber">V_we</span><span class="d-white">
+  [e₂] × W_Q = </span><span class="d-blue">Q_are</span><span class="d-white">   [e₂] × W_K = </span><span class="d-green">K_are</span><span class="d-white">   [e₂] × W_V = </span><span class="d-amber">V_are</span><span class="d-white">
+  [e₃] × W_Q = </span><span class="d-blue">Q_fri</span><span class="d-white">   [e₃] × W_K = </span><span class="d-green">K_fri</span><span class="d-white">   [e₃] × W_V = </span><span class="d-amber">V_fri</span><span class="d-white">
+
+</span><span class="d-purple">Step 3: Attention Score = Q · K (Dot Product)</span><span class="d-white">
+  Q_we · K_we, Q_we · K_are, Q_we · K_fri
+  Q_are · K_we, Q_are · K_are, Q_are · K_fri
+  Q_fri · K_we, Q_fri · K_are, Q_fri · K_fri
+           ↓ (9টি Score পাই)
+
+</span><span class="d-amber">Step 4: Softmax + Scaling → Attention Weights</span><span class="d-white">
+
+</span><span class="d-green">Step 5: Weighted Sum of Value vectors</span><span class="d-white">
+  Contextual Embedding = Σ (Attention_Weight × V)
+
+  Output: Context Embedding of "We", "are", "friends"</span>
+    </div>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-header">CROSS ATTENTION — Working Process (মূল পার্থক্য সহ)</div>
+    <div class="diagram-body"><span class="d-white">Input:  English Sequence → "We are friends"    (</span><span class="d-green">Encoder থেকে আসে</span><span class="d-white">)
+Output: Hindi Sequence  → "हम दोस्त हैं"      (</span><span class="d-blue">Decoder থেকে আসে</span><span class="d-white">)
+
+</span><span class="d-blue">Step 1: উভয় Sequence-এর Embedding তৈরি</span><span class="d-white">
+
+  Hindi (Output Sequence):
+  हम    ──► [h₁]
+  दोस्त ──► [h₂]   ← Decoder-এর Contextual Embedding
+  हैं   ──► [h₃]
+
+  English (Input Sequence):
+  We      ──► [e₁]
+  are     ──► [e₂]  ← Encoder-এর Contextual Embedding
+  friends ──► [e₃]
+
+</span><span class="d-purple">★ Step 2: এখানেই মূল পার্থক্য! Q, K, V আলাদা জায়গা থেকে আসে</span><span class="d-white">
+
+  </span><span class="d-blue">Query (Q) = Hindi Embedding × W_Q</span><span class="d-white">
+  (Decoder-এর Hindi শব্দ থেকে Q তৈরি)
+
+  h₁ × W_Q = </span><span class="d-blue">Q_हम</span><span class="d-white">
+  h₂ × W_Q = </span><span class="d-blue">Q_दोस्त</span><span class="d-white">
+  h₃ × W_Q = </span><span class="d-blue">Q_हैं</span><span class="d-white">
+
+  </span><span class="d-green">Key   (K) = English Embedding × W_K</span><span class="d-white">
+  </span><span class="d-amber">Value (V) = English Embedding × W_V</span><span class="d-white">
+  (Encoder-এর English শব্দ থেকে K, V তৈরি)
+
+  e₁ × W_K = </span><span class="d-green">K_we</span><span class="d-white">      e₁ × W_V = </span><span class="d-amber">V_we</span><span class="d-white">
+  e₂ × W_K = </span><span class="d-green">K_are</span><span class="d-white">     e₂ × W_V = </span><span class="d-amber">V_are</span><span class="d-white">
+  e₃ × W_K = </span><span class="d-green">K_fri</span><span class="d-white">     e₃ × W_V = </span><span class="d-amber">V_fri</span><span class="d-white">
+
+</span><span class="d-purple">Step 3: Attention Score = Q(Hindi) · K(English)</span><span class="d-white">
+  (Hindi-র প্রতিটি শব্দের সাথে English-এর প্রতিটি শব্দের similarity)
+
+  Q_हम · K_we,  Q_हम · K_are,  Q_हम · K_fri
+  Q_दोस्त · K_we, Q_दोस्त · K_are, Q_दोस्त · K_fri
+  Q_हैं · K_we,  Q_हैं · K_are,  Q_हैं · K_fri
+              ↓ (9টি Score)
+
+</span><span class="d-amber">Step 4: Softmax + Scaling → Attention Weights</span><span class="d-white">
+
+</span><span class="d-green">Step 5: Output = Weighted Sum of V(English)</span><span class="d-white">
+  Output Contextual Embeddings = 3টি (Hindi শব্দের সমান)
+  CE_हम, CE_दोस्त, CE_हैं</span>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">১</div>
+      <div class="step-content">
+        <h4>উভয় Sequence-এর Embedding তৈরি</h4>
+        <p>Output Sequence (Hindi)-র প্রতিটি শব্দের Embedding এবং Input Sequence (English)-র প্রতিটি শব্দের Embedding তৈরি করো। এটি হতে পারে Initial Embedding বা আগের Layer-এর Contextual Embedding।</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">২</div>
+      <div class="step-content">
+        <h4>Q, K, V Vector তৈরি — ভিন্ন ভিন্ন Source থেকে</h4>
+        <p><span class="hl-blue">Query (Q)</span> আসে Output Sequence (Decoder/Hindi) থেকে → W_Q Matrix দিয়ে।<br>
+        <span class="hl-green">Key (K)</span> আসে Input Sequence (Encoder/English) থেকে → W_K Matrix দিয়ে।<br>
+        <span class="hl-amber">Value (V)</span> আসে Input Sequence (Encoder/English) থেকে → W_V Matrix দিয়ে।</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">৩</div>
+      <div class="step-content">
+        <h4>Attention Score হিসাব করো (Q · K Dot Product)</h4>
+        <p>প্রতিটি Hindi শব্দের Query-কে প্রতিটি English শব্দের Key-এর সাথে Dot Product করো। এতে পাওয়া যায় "কোন Hindi শব্দ কোন English শব্দের সাথে কতটা মিলে" তার Score।</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">৪</div>
+      <div class="step-content">
+        <h4>Scaling ও Softmax লাগাও</h4>
+        <p>Score গুলো √d_k দিয়ে ভাগ করো (Scaling), তারপর Softmax লাগাও। এতে প্রতিটি Hindi শব্দের জন্য সব English শব্দের উপর Attention Weights পাওয়া যায় (সব মিলিয়ে ১)।</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">৫</div>
+      <div class="step-content">
+        <h4>Weighted Sum দিয়ে Final Output তৈরি</h4>
+        <p>Attention Weights দিয়ে English-এর Value (V) Vectors-এর Weighted Sum করো। ফলাফল হল প্রতিটি Hindi শব্দের জন্য একটি Contextual Embedding — যা সেই শব্দের সাথে কোন কোন English শব্দ কতটা সম্পর্কিত তা ধারণ করে।</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ SECTION 4 ══════════ -->
+  <div class="section-header">
+    <div class="section-icon icon-amber">📊</div>
+    <div>
+      <div class="sec-num">SECTION 04</div>
+      <h2>Input, Processing ও Output — তিনটি পার্থক্য</h2>
+    </div>
+  </div>
+
+  <div class="compare-grid">
+    <div class="compare-col">
+      <div class="compare-col-header self-header">⚡ Self Attention</div>
+      <div class="compare-row">
+        <span>INPUT</span>
+        একটি মাত্র Sequence-এর Embedding।<br>যেমন: "We are friends" — এই তিনটি শব্দের Embedding।
+      </div>
+      <div class="compare-row">
+        <span>PROCESSING</span>
+        Q, K, V তিনটিই একই Sequence থেকে তৈরি হয়। W_Q, W_K, W_V সবই একই Embedding-এ Apply হয়।
+      </div>
+      <div class="compare-row">
+        <span>OUTPUT</span>
+        ইনপুট Sequence-এর প্রতিটি শব্দের জন্য একটি করে Contextual Embedding। ৩টি Input → ৩টি Output।
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-col-header cross-header">🔗 Cross Attention</div>
+      <div class="compare-row">
+        <span>INPUT</span>
+        দুটি Sequence-এর Embedding একসাথে।<br>যেমন: "We are friends" (ইংরেজি) + "हम दोस्त हैं" (হিন্দি)।
+      </div>
+      <div class="compare-row">
+        <span>PROCESSING</span>
+        Q আসে Output Sequence (হিন্দি) থেকে। K ও V আসে Input Sequence (ইংরেজি) থেকে।
+      </div>
+      <div class="compare-row">
+        <span>OUTPUT</span>
+        Output Sequence-এর শব্দ সংখ্যার সমান Contextual Embedding। হিন্দিতে ৩ শব্দ → ৩টি Output।
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Attention Weight Matrix — কী মানে বোঝায়?</h3>
+    <p>Cross Attention-এর পর আমরা পাই একটি Matrix যেখানে দেখা যায় কোন Hindi শব্দ কোন English শব্দের সাথে কতটা সম্পর্কিত:</p>
+    <table class="weight-table">
+      <thead>
+        <tr>
+          <th>Hindi ↓ / English →</th>
+          <th>We</th>
+          <th>are</th>
+          <th>friends</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color:#fff;font-weight:700;">हम</td>
+          <td class="high">0.50 ↑</td>
+          <td class="med">0.30</td>
+          <td class="low">0.20</td>
+        </tr>
+        <tr>
+          <td style="color:#fff;font-weight:700;">दोस्त</td>
+          <td class="low">0.20</td>
+          <td class="low">0.20</td>
+          <td class="high">0.60 ↑</td>
+        </tr>
+        <tr>
+          <td style="color:#fff;font-weight:700;">हैं</td>
+          <td class="low">0.30</td>
+          <td class="high">0.40 ↑</td>
+          <td class="low">0.30</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:14px; font-size:14px; color: var(--text2);">↑ = সবচেয়ে বেশি Attention। "हम" → "We"-র উপর সবচেয়ে বেশি focus, "दोस्त" → "friends"-এর উপর, "हैं" → "are"-এর উপর।</p>
+  </div>
+
+  <div class="card-highlight">
+    <h3>Output Contextual Embedding কীভাবে তৈরি হয়?</h3>
+    <p><span class="hl-green">CE(हम)</span> = 0.50 × V(We) + 0.30 × V(are) + 0.20 × V(friends)</p>
+    <p><span class="hl-blue">CE(दोस्त)</span> = 0.20 × V(We) + 0.20 × V(are) + 0.60 × V(friends)</p>
+    <p><span class="hl-amber">CE(हैं)</span> = 0.30 × V(We) + 0.40 × V(are) + 0.30 × V(friends)</p>
+    <p>প্রতিটি Hindi শব্দের Contextual Embedding-এ সব English শব্দের Value Vector-এর অবদান থাকে — কিন্তু Attention Weight অনুযায়ী বেশি বা কম।</p>
+  </div>
+
+  <div class="math-box">
+    <div class="math-label">Cross Attention Formula</div>
+    CrossAttention(Q, K, V) = Softmax( Q·Kᵀ / √d_k ) · V
+    <br><br>
+    Q ← Output Sequence (Decoder)
+    K, V ← Input Sequence (Encoder)
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ SECTION 5 ══════════ -->
+  <div class="section-header">
+    <div class="section-icon icon-red">🔗</div>
+    <div>
+      <div class="sec-num">SECTION 05</div>
+      <h2>Bahdanau ও Luong Attention-এর সাথে সম্পর্ক</h2>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Cross Attention কি আগে থেকেই ছিল?</h3>
+    <p>হ্যাঁ! Transformer-এর আগেও RNN-based Encoder-Decoder আর্কিটেকচারে একই ধারণা ছিল। সেখানে প্রতিটি নতুন হিন্দি শব্দ তৈরি করার আগে সব ইংরেজি শব্দের সাথে Similarity বের করা হত।</p>
+  </div>
+
+  <div class="compare-grid">
+    <div class="compare-col">
+      <div class="compare-col-header self-header">Bahdanau Attention (2015)</div>
+      <div class="compare-row">
+        <span>Similarity বের করার পদ্ধতি</span>
+        Neural Network ব্যবহার করে similarity score বের করা হত।
+      </div>
+      <div class="compare-row">
+        <span>সূত্র</span>
+        score(hᵢ, sⱼ) = vᵃᵀ · tanh(Wₐ[hᵢ; sⱼ]) — একটি ছোট Neural Network।
+      </div>
+    </div>
+    <div class="compare-col">
+      <div class="compare-col-header cross-header">Luong Attention (2015)</div>
+      <div class="compare-row">
+        <span>Similarity বের করার পদ্ধতি</span>
+        Dot Product ব্যবহার করে similarity score বের করা হত।
+      </div>
+      <div class="compare-row">
+        <span>সূত্র</span>
+        score(hᵢ, sⱼ) = hᵢᵀ · sⱼ — সরাসরি Dot Product (Cross Attention-এর মতোই!)
+      </div>
+    </div>
+  </div>
+
+  <div class="card-highlight">
+    <h3>Transformer-এর Original Paper ("Attention is All You Need") কী বলে?</h3>
+    <p>Paper-এ Cross Attention-কে বলা হয়েছে <span class="hl-blue">"Encoder-Decoder Attention"</span>। Paper-এর একটি গুরুত্বপূর্ণ লাইন:</p>
+    <div class="definition-box" style="margin-top:16px;">
+      <span class="def-label">Paper থেকে</span>
+      <p>"In encoder-decoder attention layers, the <strong>queries come from the previous decoder layer</strong>, and the <strong>memory keys and values come from the output of the encoder</strong>. This allows every position in the decoder to attend over all positions in the input sequence. This <em>mimics</em> the typical encoder-decoder attention mechanisms in sequence-to-sequence models."</p>
+    </div>
+    <p style="margin-top:12px;"><span class="hl-green">মানে:</span> Transformer-এর নির্মাতারা সরাসরি Bahdanau ও Luong Attention থেকে অনুপ্রেরণা নিয়েছেন এবং সেটিকেই Dot-Product Attention-এর মাধ্যমে আরও শক্তিশালী করেছেন।</p>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-header">Historical Connection — Attention-এর বিবর্তন</div>
+    <div class="diagram-body"><span class="d-white">  2015                    2015                      2017
+    ┌────────────┐          ┌────────────┐            ┌────────────────────┐
+    │  Bahdanau  │          │   Luong    │            │  Cross Attention   │
+    │ Attention  │──────►   │ Attention  │──────►     │ (Transformer)      │
+    │            │          │            │            │                    │
+    │ Neural Net │          │ Dot Product│            │ Q·Kᵀ/√d · V       │
+    │ for score  │          │ for score  │            │ Q ← Decoder        │
+    │            │          │            │            │ K,V ← Encoder      │
+    └────────────┘          └────────────┘            └────────────────────┘
+         │                       │                           │
+         └───────────────────────┘                           │
+                     উভয়ই করত:                              │
+              "Hindi শব্দের সাথে সব              একই কাজ, কিন্তু আরও
+               English শব্দের similarity"          দক্ষ ও Scalable পদ্ধতিতে</span>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ SECTION 6 ══════════ -->
+  <div class="section-header">
+    <div class="section-icon icon-blue">🎨</div>
+    <div>
+      <div class="sec-num">SECTION 06</div>
+      <h2>Visual Diagrams — সম্পূর্ণ প্রবাহ</h2>
+    </div>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-header">COMPLETE CROSS ATTENTION FLOW — "I like eating ice cream" → হিন্দি</div>
+    <div class="diagram-body"><span class="d-white">    ENCODER SIDE                         DECODER SIDE
+  ┌──────────────────┐                ┌──────────────────────┐
+  │   Input Tokens   │                │   Output Tokens      │
+  │  "I like eating  │                │ (এখন পর্যন্ত হিন্দিতে) │
+  │    ice cream"    │                │  "मुझे आइसक्रीम"     │
+  └────────┬─────────┘                └──────────┬───────────┘
+           │                                     │
+           ▼                                     ▼
+  ┌──────────────────┐                ┌──────────────────────┐
+  │ Encoder Layers   │                │ Masked Self Attention │
+  │ (Self Attention  │                │ (Hindi শব্দগুলোর     │
+  │  + FFN ×N)       │                │  নিজেদের মধ্যে      │
+  └────────┬─────────┘                │  সম্পর্ক)            │
+           │                          └──────────┬───────────┘
+           │  Contextual Embeddings              │
+           │  of English words                   │
+           │                                     │
+           ▼         ▼                           │
+    ┌────────────────────────────────────────────┴──────────┐
+    │                  CROSS ATTENTION BLOCK                 │
+    │                                                        │
+    │  English Embeddings ──► W_K ──► </span><span class="d-green">K (Key)</span><span class="d-white">               │
+    │  English Embeddings ──► W_V ──► </span><span class="d-amber">V (Value)</span><span class="d-white">             │
+    │  Hindi Embeddings   ──► W_Q ──► </span><span class="d-blue">Q (Query)</span><span class="d-white">             │
+    │                                                        │
+    │  Attention Score = </span><span class="d-blue">Q</span><span class="d-white"> · </span><span class="d-green">Kᵀ</span><span class="d-white"> / √d_k                  │
+    │  Attention Weights = Softmax(Score)                    │
+    │  Output = Weights × </span><span class="d-amber">V</span><span class="d-white">                               │
+    │                                                        │
+    │  ★ "খাना" জেনারেট করতে "eating"-এ সবচেয়ে বেশি focus │
+    └──────────────────────────┬─────────────────────────────┘
+                               │
+                               ▼
+               ┌───────────────────────────┐
+               │   Contextual Embeddings   │
+               │  (Hindi শব্দ সংখ্যার সমান) │
+               │  CE_मुझे, CE_आइसक्रीम, ...  │
+               └──────────────────────────┘
+                               │
+                               ▼
+                    ┌─────────────────┐
+                    │  Feed Forward   │
+                    │    Network      │
+                    └────────┬────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │  Next Token:    │
+                    │   "खाना"        │
+                    └─────────────────┘</span>
+    </div>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-header">ATTENTION HEATMAP — কোন শব্দ কোন শব্দে Focus করে</div>
+    <div class="diagram-body"><span class="d-white">              English Input Sequence
+              I      like    eating  ice  cream
+            ┌──────┬───────┬────────┬────┬───────┐
+  Hindi  मुझे │  </span><span class="d-green">0.6</span><span class="d-white">  │  0.1  │  0.1   │0.1 │  0.1  │  ← "I" → "मुझे" (সবচেয়ে বেশি)
+  Output दोस्त │  0.1  │  0.1  │  0.1   │0.1 │  </span><span class="d-green">0.6</span><span class="d-white">  │
+         खाना  │  0.1  │  0.1  │  </span><span class="d-green">0.7</span><span class="d-white">   │0.0 │  0.1  │  ← "eating" → "खाना" (সবচেয়ে বেশি)
+         पसंद  │  0.1  │  </span><span class="d-green">0.6</span><span class="d-white">  │  0.1   │0.1 │  0.1  │  ← "like" → "पसंद" (সবচেয়ে বেশি)
+           है  │  0.1  │  0.1  │  0.1   │0.1 │  0.1 + │
+            └──────┴───────┴────────┴────┴───────┘
+
+  গাঢ় সবুজ = বেশি Attention | ফ্যাকাশে = কম Attention
+
+  ★ Cross Attention আমাদের দেখায়:
+     "आइसक्रीम" ← "ice cream"-এর সাথে সবচেয়ে বেশি মিল
+     "खाना"      ← "eating"-এর সাথে সবচেয়ে বেশি মিল
+     "पसंद"      ← "like"-এর সাথে সবচেয়ে বেশি মিল</span>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ SECTION 7 ══════════ -->
+  <div class="section-header">
+    <div class="section-icon icon-green">🌐</div>
+    <div>
+      <div class="sec-num">SECTION 07</div>
+      <h2>Cross Attention কোথায় কোথায় ব্যবহার হয়?</h2>
+    </div>
+  </div>
+
+  <div class="callout callout-green">
+    <div class="callout-icon">🌟</div>
+    <p>Cross Attention বিশেষভাবে কার্যকর যেখানে <strong>Input এক ধরনের</strong> এবং <strong>Output অন্য ধরনের</strong> — অর্থাৎ দুটো আলাদা Sequence বা Modality থাকে।</p>
+  </div>
+
+  <div class="use-grid">
+    <div class="use-card">
+      <div class="use-icon">🌍</div>
+      <h4>Machine Translation</h4>
+      <p>ইংরেজি → হিন্দি, বাংলা → ফরাসি। একটি ভাষার Sequence থেকে অন্য ভাষার Sequence তৈরি।</p>
+    </div>
+    <div class="use-card">
+      <div class="use-icon">📝</div>
+      <h4>Text Summarization</h4>
+      <p>দীর্ঘ নিবন্ধের Input Sequence থেকে সংক্ষিপ্ত Output Sequence তৈরি।</p>
+    </div>
+    <div class="use-card">
+      <div class="use-icon">❓</div>
+      <h4>Question Answering</h4>
+      <p>Context (passage) এবং Question দুটো আলাদা Sequence — Cross Attention উভয়ের মধ্যে সম্পর্ক খোঁজে।</p>
+    </div>
+    <div class="use-card">
+      <div class="use-icon">🖼️</div>
+      <h4>Image Captioning</h4>
+      <p>Input = ছবি (Image Patches), Output = টেক্সট Caption। দুটো ভিন্ন Modality-র মধ্যে Cross Attention।</p>
+    </div>
+    <div class="use-card">
+      <div class="use-icon">🎨</div>
+      <h4>Text-to-Image Generation</h4>
+      <p>Input = টেক্সট Prompt, Output = Image। DALL-E, Stable Diffusion-এ Cross Attention ব্যবহৃত হয়।</p>
+    </div>
+    <div class="use-card">
+      <div class="use-icon">🔊</div>
+      <h4>Text-to-Speech (TTS)</h4>
+      <p>Input = টেক্সট Sequence, Output = Audio/Speech Sequence। উভয়ের মধ্যে Cross Attention।</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px;">
+    <h3>Multi-modal AI-তে Cross Attention-এর ভবিষ্যৎ</h3>
+    <p>Deep Learning, LLMs এবং Generative AI-তে Cross Attention একটি অত্যন্ত গুরুত্বপূর্ণ কনসেপ্ট। যেকোনো সময় দুটো ভিন্ন ধরনের Data (text-image, text-audio, image-video) একসাথে কাজ করবে, সেখানেই Cross Attention-এর ব্যবহার হবে।</p>
+    <div class="tag-list">
+      <span class="tag tag-blue">GPT-4V (Vision)</span>
+      <span class="tag tag-purple">DALL-E 3</span>
+      <span class="tag tag-green">Whisper (Speech)</span>
+      <span class="tag tag-amber">Stable Diffusion</span>
+      <span class="tag tag-blue">Flamingo</span>
+      <span class="tag tag-purple">LLaVA</span>
+    </div>
+  </div>
+
+  <!-- ══════════ SUMMARY ══════════ -->
+  <div class="sep"></div>
+
+  <div class="section-header">
+    <div class="section-icon icon-purple">📌</div>
+    <div>
+      <div class="sec-num">SUMMARY</div>
+      <h2>মূল বিষয়গুলো এক নজরে</h2>
+    </div>
+  </div>
+
+  <div class="card-highlight">
+    <h3>🎯 Cross Attention — ৫টি Key Points</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">①</div>
+        <div class="step-content">
+          <h4>দুটো Sequence-এর মধ্যে সম্পর্ক</h4>
+          <p>Cross Attention করে দুটো ভিন্ন Sequence (Input ও Output) এর শব্দগুলোর মধ্যে Similarity বের করার কাজ।</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">②</div>
+        <div class="step-content">
+          <h4>Q, K, V ভিন্ন জায়গা থেকে</h4>
+          <p>Query (Q) আসে Output/Decoder থেকে। Key (K) ও Value (V) আসে Input/Encoder থেকে। এটাই Self Attention থেকে মূল পার্থক্য।</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">③</div>
+        <div class="step-content">
+          <h4>Output সংখ্যা = Output Sequence-এর শব্দ সংখ্যা</h4>
+          <p>Cross Attention-এর Output Contextual Embedding-এর সংখ্যা সবসময় Output Sequence (Decoder)-এর শব্দ সংখ্যার সমান।</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">④</div>
+        <div class="step-content">
+          <h4>Bahdanau/Luong-এর উত্তরসূরি</h4>
+          <p>Transformer-এর Cross Attention আসলে পুরনো RNN-based Attention-এর (Bahdanau, Luong) Dot Product ভার্সন — একই ধারণা, আরও দক্ষ পদ্ধতিতে।</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">⑤</div>
+        <div class="step-content">
+          <h4>Multi-modal AI-এর মূল স্তম্ভ</h4>
+          <p>Text, Image, Audio — যেকোনো দুটো ভিন্ন মোডালিটির মধ্যে সম্পর্ক বের করতে Cross Attention ব্যবহার হয়।</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<div class="footer">
+  Cross Attention — Transformer Architecture Technical Guide &nbsp;·&nbsp; সম্পূর্ণ বাংলায় &nbsp;·&nbsp; AI/ML শিক্ষামূলক সিরিজ
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Masked Multi-Head Attention — টেকনিক্যাল গাইড</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --bg2: #13161f;
+    --bg3: #1a1e2b;
+    --card: #1e2230;
+    --border: #2a3045;
+    --accent1: #f0a500;
+    --accent2: #4fc3f7;
+    --accent3: #81c784;
+    --accent4: #ef5350;
+    --accent5: #ce93d8;
+    --text: #e8ecf4;
+    --text2: #9aa3b8;
+    --text3: #6b7591;
+    --glow1: rgba(240,165,0,0.15);
+    --glow2: rgba(79,195,247,0.12);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Serif Bengali', serif;
+    line-height: 1.9;
+    font-size: 16px;
+  }
+
+  /* ─── COVER PAGE ─── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: radial-gradient(ellipse at 30% 20%, rgba(240,165,0,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(79,195,247,0.07) 0%, transparent 60%),
+                var(--bg);
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px);
+    pointer-events: none;
+  }
+  .cover-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent1), #ff8c00);
+    color: #000;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    padding: 5px 18px;
+    border-radius: 20px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+  .cover-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(32px, 5vw, 58px);
+    font-weight: 900;
+    line-height: 1.15;
+    background: linear-gradient(135deg, #f0a500 0%, #ffd54f 40%, #4fc3f7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 20px;
+    max-width: 900px;
+  }
+  .cover-subtitle {
+    font-size: 18px;
+    color: var(--text2);
+    margin-bottom: 12px;
+  }
+  .cover-desc {
+    font-size: 15px;
+    color: var(--text3);
+    max-width: 600px;
+    margin-bottom: 48px;
+    line-height: 1.7;
+  }
+  .cover-tags {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 60px;
+  }
+  .tag {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--accent2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: 6px;
+  }
+  .cover-line {
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent1), var(--accent2));
+    margin: 0 auto 24px;
+  }
+  .cover-series {
+    font-size: 13px;
+    color: var(--text3);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  /* ─── LAYOUT ─── */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ─── TOC ─── */
+  .toc-section {
+    background: var(--bg2);
+    border-top: 3px solid var(--accent1);
+    padding: 56px 0;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .toc-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text2);
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .toc-item:hover {
+    border-color: var(--accent1);
+    color: var(--text);
+    transform: translateX(4px);
+  }
+  .toc-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent1);
+    min-width: 28px;
+  }
+
+  /* ─── SECTIONS ─── */
+  .section {
+    padding: 72px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .section:last-child { border-bottom: none; }
+  .section-alt { background: var(--bg2); }
+
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  .section-icon {
+    font-size: 36px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent1);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(24px, 3vw, 34px);
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text);
+  }
+
+  /* ─── PROSE ─── */
+  p { margin-bottom: 18px; color: var(--text2); }
+  p strong { color: var(--text); }
+  p:last-child { margin-bottom: 0; }
+
+  /* ─── HIGHLIGHT BOX ─── */
+  .highlight-box {
+    background: linear-gradient(135deg, rgba(240,165,0,0.07), rgba(240,165,0,0.03));
+    border-left: 4px solid var(--accent1);
+    border-radius: 0 12px 12px 0;
+    padding: 20px 24px;
+    margin: 28px 0;
+  }
+  .highlight-box.blue {
+    background: linear-gradient(135deg, rgba(79,195,247,0.07), rgba(79,195,247,0.03));
+    border-left-color: var(--accent2);
+  }
+  .highlight-box.green {
+    background: linear-gradient(135deg, rgba(129,199,132,0.07), rgba(129,199,132,0.03));
+    border-left-color: var(--accent3);
+  }
+  .highlight-box.red {
+    background: linear-gradient(135deg, rgba(239,83,80,0.07), rgba(239,83,80,0.03));
+    border-left-color: var(--accent4);
+  }
+  .highlight-box.purple {
+    background: linear-gradient(135deg, rgba(206,147,216,0.07), rgba(206,147,216,0.03));
+    border-left-color: var(--accent5);
+  }
+  .box-title {
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent1);
+    font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .highlight-box.blue .box-title { color: var(--accent2); }
+  .highlight-box.green .box-title { color: var(--accent3); }
+  .highlight-box.red .box-title { color: var(--accent4); }
+  .highlight-box.purple .box-title { color: var(--accent5); }
+  .highlight-box p { margin-bottom: 8px; }
+  .highlight-box p:last-child { margin-bottom: 0; }
+
+  /* ─── KEY SENTENCE ─── */
+  .key-sentence {
+    background: var(--bg3);
+    border: 2px solid var(--accent1);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin: 36px 0;
+    position: relative;
+  }
+  .key-sentence::before {
+    content: '❝';
+    position: absolute;
+    top: -16px;
+    left: 24px;
+    font-size: 32px;
+    color: var(--accent1);
+    background: var(--bg);
+    padding: 0 8px;
+    line-height: 1;
+  }
+  .key-sentence p {
+    font-size: 17px;
+    font-style: italic;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.8;
+  }
+  .key-sentence span {
+    color: var(--accent1);
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  /* ─── STEPS ─── */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 28px 0;
+  }
+  .step {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent1), #ff8c00);
+    color: #000;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-content { flex: 1; }
+  .step-title {
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    font-size: 15px;
+  }
+  .step-desc { color: var(--text2); font-size: 14px; margin: 0; }
+
+  /* ─── COMPARISON TABLE ─── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 28px 0;
+  }
+  .compare-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .compare-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .compare-card.bad::before { background: var(--accent4); }
+  .compare-card.good::before { background: var(--accent3); }
+  .compare-head {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+  .compare-card.bad .compare-head { color: var(--accent4); }
+  .compare-card.good .compare-head { color: var(--accent3); }
+  .compare-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: var(--text2);
+  }
+  .compare-item:last-child { margin-bottom: 0; }
+  .ci-icon { flex-shrink: 0; }
+
+  /* ─── ASCII DIAGRAM ─── */
+  .diagram-block {
+    background: #0a0c12;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin: 28px 0;
+    overflow-x: auto;
+  }
+  .diagram-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .diagram-block pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre;
+  }
+  .d-yellow { color: #f0a500; }
+  .d-blue { color: #4fc3f7; }
+  .d-green { color: #81c784; }
+  .d-red { color: #ef5350; }
+  .d-purple { color: #ce93d8; }
+  .d-gray { color: #6b7591; }
+
+  /* ─── MATRIX TABLE ─── */
+  .matrix-wrap {
+    overflow-x: auto;
+    margin: 28px 0;
+  }
+  .matrix-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+  }
+  .matrix-table th {
+    background: var(--bg3);
+    color: var(--accent1);
+    padding: 12px 16px;
+    text-align: center;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .matrix-table td {
+    padding: 12px 16px;
+    text-align: center;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    background: var(--card);
+  }
+  .matrix-table td.highlight { 
+    color: var(--accent4); 
+    background: rgba(239,83,80,0.08);
+    font-weight: 600;
+  }
+  .matrix-table td.zero {
+    color: var(--accent3);
+    background: rgba(129,199,132,0.06);
+  }
+  .matrix-table th.row-head {
+    background: var(--bg3);
+    color: var(--accent2);
+  }
+
+  /* ─── FORMULA ─── */
+  .formula-block {
+    background: var(--bg3);
+    border: 1px solid rgba(79,195,247,0.3);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 24px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--accent2);
+    overflow-x: auto;
+  }
+  .formula-label {
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ─── TWO-COLUMN ─── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin: 28px 0;
+  }
+  .col-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+  }
+  .col-card h4 {
+    color: var(--text);
+    font-size: 15px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .col-card p { font-size: 14px; margin-bottom: 8px; }
+  .col-card p:last-child { margin-bottom: 0; }
+
+  /* ─── INFO PILLS ─── */
+  .pill-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .pill {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid;
+  }
+  .pill-yellow { color: var(--accent1); border-color: rgba(240,165,0,0.4); background: rgba(240,165,0,0.08); }
+  .pill-blue { color: var(--accent2); border-color: rgba(79,195,247,0.4); background: rgba(79,195,247,0.08); }
+  .pill-green { color: var(--accent3); border-color: rgba(129,199,132,0.4); background: rgba(129,199,132,0.08); }
+  .pill-red { color: var(--accent4); border-color: rgba(239,83,80,0.4); background: rgba(239,83,80,0.08); }
+  .pill-purple { color: var(--accent5); border-color: rgba(206,147,216,0.4); background: rgba(206,147,216,0.08); }
+
+  /* ─── PROBLEM-SOLUTION ─── */
+  .ps-block {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 0;
+    margin: 32px 0;
+    align-items: center;
+  }
+  .ps-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+  }
+  .ps-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .ps-card.problem .ps-title { color: var(--accent4); }
+  .ps-card.solution .ps-title { color: var(--accent3); }
+  .ps-card p { font-size: 14px; margin-bottom: 6px; }
+  .ps-arrow { text-align: center; font-size: 24px; color: var(--accent1); }
+
+  /* ─── FLOW DIAGRAM ─── */
+  .flow-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 28px 0;
+    align-items: center;
+  }
+  .flow-box {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 28px;
+    font-size: 14px;
+    color: var(--text);
+    text-align: center;
+    min-width: 280px;
+    position: relative;
+  }
+  .flow-box.yellow { border-color: var(--accent1); background: rgba(240,165,0,0.06); }
+  .flow-box.blue { border-color: var(--accent2); background: rgba(79,195,247,0.06); }
+  .flow-box.green { border-color: var(--accent3); background: rgba(129,199,132,0.06); }
+  .flow-box.red { border-color: var(--accent4); background: rgba(239,83,80,0.06); }
+  .flow-box.purple { border-color: var(--accent5); background: rgba(206,147,216,0.06); }
+  .flow-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 4px;
+  }
+  .flow-arrow {
+    font-size: 22px;
+    color: var(--accent1);
+    line-height: 1;
+    padding: 6px 0;
+  }
+  .flow-side {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .flow-note {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text3);
+    background: var(--bg3);
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px dashed var(--border);
+    max-width: 160px;
+    text-align: center;
+  }
+
+  /* ─── HEADING STYLES ─── */
+  h2.sub {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    margin: 36px 0 16px;
+    padding-left: 14px;
+    border-left: 3px solid var(--accent2);
+  }
+  h3.mini {
+    font-size: 15px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent5);
+    margin: 24px 0 10px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ─── TIMELINE (TRAINING STEPS) ─── */
+  .timeline {
+    position: relative;
+    padding-left: 40px;
+    margin: 28px 0;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 14px; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent1), var(--accent2), var(--accent5));
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 24px;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -32px; top: 6px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent1);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 3px rgba(240,165,0,0.2);
+  }
+  .tl-item:nth-child(2)::before { background: var(--accent2); box-shadow: 0 0 0 3px rgba(79,195,247,0.2); }
+  .tl-item:nth-child(3)::before { background: var(--accent3); box-shadow: 0 0 0 3px rgba(129,199,132,0.2); }
+  .tl-item:nth-child(4)::before { background: var(--accent5); box-shadow: 0 0 0 3px rgba(206,147,216,0.2); }
+  .tl-item:nth-child(5)::before { background: var(--accent4); box-shadow: 0 0 0 3px rgba(239,83,80,0.2); }
+  .tl-head { font-weight: 700; color: var(--text); margin-bottom: 4px; font-size: 15px; }
+  .tl-body { color: var(--text2); font-size: 14px; }
+
+  /* ─── SUMMARY BOX ─── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 28px 0;
+  }
+  .summary-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    text-align: center;
+  }
+  .sc-icon { font-size: 28px; margin-bottom: 10px; }
+  .sc-title { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+  .sc-value { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--accent1); font-weight: 600; }
+
+  /* ─── SEPARATOR ─── */
+  .sep {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .sep-line { flex: 1; height: 1px; background: var(--border); }
+  .sep-text { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); letter-spacing: 2px; }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 40px 0;
+    text-align: center;
+  }
+  .footer p { color: var(--text3); font-size: 13px; }
+  .footer strong { color: var(--accent1); }
+
+  /* ─── PRINT / PDF ─── */
+  @media print {
+    body { background: white; color: #111; font-size: 13px; }
+    .cover { background: white; min-height: auto; padding: 40px 20px; }
+    .cover-title { -webkit-text-fill-color: #333; background: none; color: #333; }
+    .section, .toc-section { border: none; padding: 32px 0; }
+    .card, .compare-card, .step, .col-card, .flow-box, .highlight-box { border: 1px solid #ddd; background: #f9f9f9; }
+    .diagram-block { background: #f5f5f5; color: #111; }
+    .diagram-block pre { color: #111; }
+    a { text-decoration: none; color: inherit; }
+    .toc-item { color: #333; }
+    p { color: #333; }
+    .text2, .tl-body, .step-desc, .compare-item, .flow-note { color: #555; }
+  }
+
+  /* ─── NEW SECTIONS (Q&A additions) ─── */
+  .section-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px;
+    margin: 32px 0;
+  }
+  .section-tag {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .body-text {
+    color: var(--text2);
+    font-size: 16px;
+    line-height: 1.9;
+    margin: 0 0 8px;
+  }
+  .step-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .step-item {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    padding: 16px 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .step-badge {
+    min-width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 14px;
+    color: #0a0e1a;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-content { flex: 1; }
+  .step-content .step-title {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+  .step-content p {
+    color: var(--text2);
+    font-size: 15px;
+    line-height: 1.8;
+    margin: 0;
+  }
+  .ascii-diagram {
+    background: #0d1117;
+    border: 1px solid rgba(0,212,170,0.2);
+    border-radius: 10px;
+    padding: 24px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: #a0d8cf;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 20px 0;
+  }
+  .comparison-table {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin: 16px 0;
+  }
+  .comparison-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .comparison-table thead tr {
+    background: rgba(240,165,0,0.1);
+  }
+  .comparison-table th {
+    padding: 12px 16px;
+    text-align: left;
+    color: var(--gold);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 1px;
+    font-family: var(--mono);
+    border-bottom: 2px solid var(--border);
+  }
+  .comparison-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text2);
+    vertical-align: top;
+  }
+  .comparison-table tr:last-child td { border-bottom: none; }
+  .comparison-table tr:hover td { background: rgba(255,255,255,0.02); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ COVER ══════════════════ -->
+<div class="cover">
+  <div class="cover-badge">Deep Learning Series · Transformer Architecture</div>
+  <h1 class="cover-title">Masked Multi-Head Attention</h1>
+  <p class="cover-subtitle">Transformer Decoder-এর সবচেয়ে গুরুত্বপূর্ণ Building Block</p>
+  <p class="cover-desc">কেন Decoder ট্রেনিংয়ে Non-Autoregressive এবং Inference-এ Autoregressive? Masking কীভাবে Data Leakage ঠেকিয়ে Parallel Processing নিশ্চিত করে? সম্পূর্ণ বাংলায় গভীর ব্যাখ্যা।</p>
+  <div class="cover-tags">
+    <span class="tag">Transformer</span>
+    <span class="tag">Decoder</span>
+    <span class="tag">Self Attention</span>
+    <span class="tag">Masking</span>
+    <span class="tag">Teacher Forcing</span>
+    <span class="tag">Autoregressive</span>
+    <span class="tag">Data Leakage</span>
+  </div>
+  <div class="cover-line"></div>
+  <p class="cover-series">Encoder পড়া শেষ · এখন Decoder Journey শুরু</p>
+</div>
+
+<!-- ══════════════════ TOC ══════════════════ -->
+<div class="toc-section">
+  <div class="container">
+    <div class="section-label">সূচিপত্র</div>
+    <div class="section-title" style="font-family:'Playfair Display',serif;font-size:28px;margin-bottom:8px;">এই গাইডে কী কী আছে</div>
+    <div class="toc-grid">
+      <a class="toc-item" href="#s1"><span class="toc-num">০১</span>সহজ ভাষায় পরিচিতি — Intuition</a>
+      <a class="toc-item" href="#s2"><span class="toc-num">০২</span>Encoder vs Decoder — পার্থক্য বোঝা</a>
+      <a class="toc-item" href="#s3"><span class="toc-num">০৩</span>Autoregressive কী? — মূল সেন্টেন্স</a>
+      <a class="toc-item" href="#s4"><span class="toc-num">০৪</span>Inference-এ Autoregressive — কীভাবে?</a>
+      <a class="toc-item" href="#s5"><span class="toc-num">০৫</span>Teacher Forcing ও Training প্রক্রিয়া</a>
+      <a class="toc-item" href="#s6"><span class="toc-num">০৬</span>সমস্যা: Slow Training বনাম Data Leakage</a>
+      <a class="toc-item" href="#s7"><span class="toc-num">০৭</span>Self Attention — ভেতরের কাজ</a>
+      <a class="toc-item" href="#s8"><span class="toc-num">০৮</span>Masking — সমাধানের মূল কৌশল</a>
+      <a class="toc-item" href="#s9"><span class="toc-num">০৯</span>Visual Diagram ও Flow Chart</a>
+      <a class="toc-item" href="#s10"><span class="toc-num">১০</span>পূর্ণ সারসংক্ষেপ</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SECTION 1 — INTUITION ══════════════════ -->
+<div class="section" id="s1">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon">🎯</div>
+      <div>
+        <div class="section-label">Section 01</div>
+        <div class="section-title">সহজ ভাষায় পরিচিতি — Intuition</div>
+      </div>
+    </div>
+
+    <h2 class="sub">এই Concept কী এবং কেন দরকার?</h2>
+    <p>কল্পনা করো তুমি একজন অনুবাদক। তোমার কাছে একটি ইংরেজি বই দেওয়া হলো এবং বলা হলো বাংলায় অনুবাদ করো। তুমি যখন প্রথম শব্দটি অনুবাদ করছ, তখন তুমি কি বইয়ের পরের শব্দ দেখছ? অবশ্যই না — তুমি শুধু এখন পর্যন্ত যা পড়েছ তার ভিত্তিতেই পরের শব্দটি লিখছ।</p>
+
+    <p>ঠিক এই ধারণাটাই হলো <strong>Masked Multi-Head Attention</strong>-এর মূল ভিত্তি। Transformer-এর Decoder যখন Output তৈরি করে, তখন সে এমনভাবে কাজ করে যেন সে ভবিষ্যৎ দেখতে পাচ্ছে না — শুধু অতীত ও বর্তমান দেখতে পাচ্ছে।</p>
+
+    <div class="highlight-box">
+      <div class="box-title">🍳 রান্নাঘরের উদাহরণ</div>
+      <p>ধরো তুমি রান্না করছ। রেসিপিতে লেখা আছে: "প্রথমে পেঁয়াজ কাটো, তারপর তেল দাও, তারপর মশলা দাও।" তুমি কি মশলা দেওয়ার আগেই তেল দিতে পারবে? না! কারণ প্রতিটি ধাপ আগের ধাপের উপর নির্ভরশীল। Language Generation-ও ঠিক এরকম — প্রতিটি শব্দ আগের শব্দগুলোর উপর নির্ভর করে।</p>
+    </div>
+
+    <h2 class="sub">এটি কোন সমস্যা সমাধান করে?</h2>
+    <p>Transformer-এর Decoder-কে দুটো বিপরীত চাহিদা পূরণ করতে হয়:</p>
+
+    <div class="compare-grid">
+      <div class="compare-card bad">
+        <div class="compare-head">❌ সমস্যা ১ — Slow Training</div>
+        <div class="compare-item"><span class="ci-icon">🔴</span><span>একটা একটা করে Token প্রসেস করলে Training অনেক ধীর হয়</span></div>
+        <div class="compare-item"><span class="ci-icon">🔴</span><span>৩০০ শব্দের Paragraph হলে ৩০১ বার একই Operation চালাতে হয়</span></div>
+        <div class="compare-item"><span class="ci-icon">🔴</span><span>লক্ষ লক্ষ Training Data থাকলে এটি অকল্পনীয় ধীর</span></div>
+      </div>
+      <div class="compare-card bad">
+        <div class="compare-head">❌ সমস্যা ২ — Data Leakage</div>
+        <div class="compare-item"><span class="ci-icon">🔴</span><span>সব Token একসাথে দিলে Current Token ভবিষ্যতের Token দেখে ফেলে</span></div>
+        <div class="compare-item"><span class="ci-icon">🔴</span><span>Training-এ চুরি করা তথ্য দিয়ে Prediction করা হয়</span></div>
+        <div class="compare-item"><span class="ci-icon">🔴</span><span>Real Prediction-এ ভবিষ্যত Token কখনো পাওয়া যায় না</span></div>
+      </div>
+    </div>
+
+    <div class="highlight-box green" style="margin-top:8px;">
+      <div class="box-title">✅ Masked Attention-এর সমাধান</div>
+      <p><strong>একসাথে সব Token Process করো</strong> (Fast Training) — কিন্তু Current Token কে ভবিষ্যতের Token দেখতে দিও না (No Data Leakage)। এই দুটো লক্ষ্য একই সাথে অর্জন করাই হলো Masking-এর কাজ।</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SECTION 2 — ENCODER VS DECODER ══════════════════ -->
+<div class="section section-alt" id="s2">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon">🏗️</div>
+      <div>
+        <div class="section-label">Section 02</div>
+        <div class="section-title">Encoder বনাম Decoder — যাত্রার মাঝামাঝিতে</div>
+      </div>
+    </div>
+
+    <p>Transformer Architecture-কে দুটো বড় অংশে ভাগ করা যায়। ইতিমধ্যে Encoder সম্পূর্ণ পড়া শেষ। এখন Decoder পড়ার পালা।</p>
+
+    <div class="two-col">
+      <div class="col-card">
+        <h4>✅ Encoder — সম্পূর্ণ পড়া (৫০%)</h4>
+        <p>• Self Attention মেকানিজম</p>
+        <p>• Multi-Head Attention</p>
+        <p>• Positional Encoding</p>
+        <p>• Add & Norm Layer</p>
+        <p>• Feed Forward Layer</p>
+        <p>• পুরো Encoder Architecture</p>
+      </div>
+      <div class="col-card">
+        <h4>⏳ Decoder — এখন পড়ছি (৫০%)</h4>
+        <p>• <strong>Masked Multi-Head Attention</strong> ← আজকের বিষয়</p>
+        <p>• Cross Attention (Encoder থেকে ২টি Arrow আসে)</p>
+        <p>• Decoder-এর বাকি সব Block (Encoder থেকে Repeat)</p>
+        <p>• পুরো Decoder Architecture (পরের ভিডিওতে)</p>
+      </div>
+    </div>
+
+    <div class="highlight-box blue">
+      <div class="box-title">💡 Decoder-এ নতুন কী আছে?</div>
+      <p><strong>"Mask"</strong> শব্দটা — এটাই Decoder-কে Encoder থেকে আলাদা করে। এছাড়া <strong>Cross Attention</strong> যেখানে Decoder থেকে ১টি Arrow এবং Encoder থেকে ২টি Arrow আসে — এটাও নতুন। বাকি সব কিছু Encoder-এর মতোই Repeat।</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SECTION 3 — AUTOREGRESSIVE ══════════════════ -->
+<div class="section" id="s3">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon">🔑</div>
+      <div>
+        <div class="section-label">Section 03</div>
+        <div class="section-title">মূল সেন্টেন্স ও Autoregressive কী?</div>
+      </div>
+    </div>
+
+    <p>এই পুরো Concept বোঝার চাবিকাঠি হলো একটি বাক্য:</p>
+
+    <div class="key-sentence">
+      <p>"The Transformer Decoder is an <span>Autoregressive</span> model <span>at Inference time</span>, and <span>Non-Autoregressive</span> <span>at Training time</span>."</p>
+    </div>
+
+    <h2 class="sub">Inference কী?</h2>
+    <p><strong>Inference</strong> মানে সহজ কথায় <strong>Prediction</strong>। যখন তুমি ট্রেনড মডেলকে দিয়ে কোনো কিছু প্রেডিক্ট করাচ্ছ — সেটাই Inference। এটাকে Real-World Use বলা যায়।</p>
+
+    <h2 class="sub">Autoregressive মডেল কী?</h2>
+    <p>এই ধারণাটি মূলত Economics-এর, তারপর Time Series-এ এসেছে। Deep Learning-এর Context-এ:</p>
+
+    <div class="highlight-box">
+      <div class="box-title">সংজ্ঞা — Autoregressive Model</div>
+      <p><em>"Autoregressive models are a class of models that generate data points in a sequence by conditioning each new data point on the previously generated points."</em></p>
+      <p style="margin-top:12px;"><strong>সহজ কথায়:</strong> প্রতিটি নতুন ডেটা তৈরি করতে আগের ডেটার সাহায্য নেওয়া হয়।</p>
+    </div>
+
+    <h3 class="mini">📈 Stock Market উদাহরণ</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">বু</div>
+        <div class="step-content">
+          <div class="step-title">বুধবার — Stock = ২৯</div>
+          <div class="step-desc">মডেল বুধবারের Stock Value প্রেডিক্ট করেছে: ২৯</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">বৃ</div>
+        <div class="step-content">
+          <div class="step-title">বৃহস্পতিবার — Stock = ৩০</div>
+          <div class="step-desc">বুধবারের ২৯-এর উপর নির্ভর করে বৃহস্পতির মান প্রেডিক্ট করা হলো: ৩০</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">শু</div>
+        <div class="step-content">
+          <div class="step-title">শুক্রবার — বুধ (২৯) + বৃহস্পতি (৩০) দেখে প্রেডিক্ট</div>
+          <div class="step-desc">এটাই Autoregressive — পূর্ববর্তী Output-এর উপর Condition করে নতুন Output তৈরি</div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sub">কেন NLP মডেলগুলো Autoregressive হতে বাধ্য?</h2>
+    <p>একসাথে সব শব্দ Generate করা সম্ভব নয়। কারণ — পরের শব্দ আগের শব্দের উপর নির্ভর করে। "মৈ বঢ়িয়া হূঁ" লিখতে হলে "মৈ" না লিখে "বঢ়িয়া" কোথা থেকে আসবে?</p>
+
+    <div class="highlight-box red">
+      <div class="box-title">⚠️ Parallel Generation সম্ভব নয়</div>
+      <p>Sequential data-এর সবচেয়ে মৌলিক বৈশিষ্ট্য হলো — <strong>আগের জিনিস না আসলে পরেরটা জেনারেট করা যায় না।</strong> তাই Language Translation, Text Generation, Text Summarization — সব Sequential Task-এ Autoregressive Model ছাড়া কোনো বিকল্প নেই।</p>
+    </div>
+
+    <div class="pill-row">
+      <span class="pill pill-yellow">Language Translation ✓ Autoregressive</span>
+      <span class="pill pill-yellow">Language Modeling ✓ Autoregressive</span>
+      <span class="pill pill-yellow">Text Summarization ✓ Autoregressive</span>
+      <span class="pill pill-yellow">Text Generation ✓ Autoregressive</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SECTION 4 — INFERENCE ══════════════════ -->
+<div class="section section-alt" id="s4">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon">🔮</div>
+      <div>
+        <div class="section-label">Section 04</div>
+        <div class="section-title">Inference-এ Autoregressive — ধাপে ধাপে</div>
+      </div>
+    </div>
+
+    <p>মনে করো আমাদের কাজ: <strong>"I am fine"</strong> → হিন্দিতে অনুবাদ = <strong>"মৈ বঢ়িয়া হূঁ"</strong></p>
+    <p>মডেল ট্রেন করা হয়ে গেছে। এখন Inference (Prediction) দেখি:</p>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-head">Step 1 — Encoder Input</div>
+        <div class="tl-body">"I", "am", "fine" — তিনটি শব্দ Encoder-এ ঢোকে। Encoder পুরো ইংরেজি সেন্টেন্স Parallel-এ প্রসেস করে (Self Attention ব্যবহার করে)। প্রতিটি শব্দের জন্য একটি Vector তৈরি হয়।</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-head">Step 2 — Decoder শুরু (START Token)</div>
+        <div class="tl-body">Encoder-এর Output + একটি Special "START" Token নিয়ে Decoder কাজ শুরু করে। এই দুই ইনপুটের ভিত্তিতে Decoder প্রথম শব্দ প্রেডিক্ট করে: <strong>"মৈ"</strong></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-head">Step 3 — দ্বিতীয় Token (গলতি হলেও চলে)</div>
+        <div class="tl-body">Encoder Output + "মৈ" → Decoder পরবর্তী শব্দ প্রেডিক্ট করে। ধরো মডেল ভুল করে "ঘটিয়া" দিয়েছে (সঠিক হওয়া উচিত ছিল "বঢ়িয়া")। Inference-এ এটা নিয়ে চিন্তা নেই, সামনে এগিয়ে যাই।</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-head">Step 4 — তৃতীয় Token</div>
+        <div class="tl-body">Encoder Output + "মৈ" + "ঘটিয়া" → Decoder পরের শব্দ দেয়: <strong>"হূঁ"</strong> (সঠিক)</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-head">Step 5 — END Token</div>
+        <div class="tl-body">Encoder Output + "মৈ ঘটিয়া হূঁ" → Decoder দেয় <strong>END Token</strong> → Translation শেষ। Final Output: "মৈ ঘটিয়া হূঁ" (বদলে "মৈ বঢ়িয়া হূঁ" হওয়া উচিত ছিল — মডেল মাঝে ভুল করেছে।)</div>
+      </div>
+    </div>
+
+    <div class="highlight-box blue">
+      <div class="box-title">🔑 মূল পর্যবেক্ষণ</div>
+      <p>Inference-এ প্রতিটি Step-এ আগের Step-এর Output ব্যবহার করতেই হবে। এটা এড়ানোর কোনো উপায় নেই। তাই <strong>Inference সবসময় Autoregressive (Sequential)</strong>। এখানে কোনো Parallel Processing সম্ভব নয়।</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SECTION 5 — TEACHER FORCING ══════════════════ -->
+<div class="section" id="s5">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon">🎓</div>
+      <div>
+        <div class="section-label">Section 05</div>
+        <div class="section-title">Teacher Forcing ও Training প্রক্রিয়া</div>
+      </div>
+    </div>
+
+    <p>Training Data ধরা যাক: <strong>"How are you?"</strong> → <strong>"আপ কৈসে হৈঁ"</strong></p>
+    <p>ধরো আমরা এখনও পুরনো পদ্ধতি (Autoregressive Training) ব্যবহার করছি:</p>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-head">ধাপ ১ — Encoder Processing</div>
+        <div class="tl-body">"How", "are", "you" → Encoder → Context Vectors তৈরি। এই Vectors Decoder-এ পাঠানো হয়।</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-head">ধাপ ২ — Decoder প্রথম Token</div>
+        <div class="tl-body">START Token + Encoder Output → Decoder দেয় "তুম" (কিন্তু সঠিক হওয়া উচিত ছিল "আপ")</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-head">ধাপ ৩ — Teacher Forcing!</div>
+        <div class="tl-body"><strong>Decoder "তুম" দিয়েছে, কিন্তু পরের Step-এ "তুম" ইনপুট হিসেবে দেওয়া হয় না।</strong> বরং Dataset থেকে সঠিক শব্দ "আপ" নেওয়া হয়। এটাই Teacher Forcing। "শিক্ষক জোর করে সঠিক উত্তর বলে দিচ্ছেন।"</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-head">ধাপ ৪ — Loss Calculation</div>
+        <div class="tl-body">আসা উচিত ছিল "আপ কৈসে হৈঁ" — এসেছে "তুম কৈসে থে"। Loss Function দিয়ে পার্থক্য মেপে Backpropagation চালাও এবং Weights আপডেট করো।</div>
+      </div>
+    </div>
+
+    <div class="highlight-box purple">
+      <div class="box-title">💡 Teacher Forcing-এর সুবিধা</div>
+      <p>Training-এ পরের Step-এর Input সবসময় Dataset থেকে নেওয়া হয় — আগের Step-এর Output থেকে নয়। এর মানে হলো — <strong>প্রতিটি Step একে অপরের উপর নির্ভরশীল নয়।</strong> তাহলে কি সব Steps একসাথে চালানো যায়? হ্যাঁ! কিন্তু একটা বিশাল সমস্যা আছে...</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SECTION 6 — PROBLEM ══════════════════ -->
+<div class="section section-alt" id="s6">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon">⚡</div>
+      <div>
+        <div class="section-label">Section 06</div>
+        <div class="section-title">দুটি বড় সমস্যা — ইধর কুঁয়া উধর খাই</div>
+      </div>
+    </div>
+
+    <div class="ps-block">
+      <div class="ps-card problem">
+        <div class="ps-title">❌ পথ ১ — Autoregressive Training</div>
+        <p>✓ Data Leakage নেই</p>
+        <p>✓ সঠিক পদ্ধতি</p>
+        <p>✗ Training অনেক ধীর</p>
+        <p>✗ ৩০০ শব্দ = ৩০১ বার Operation</p>
+        <p>✗ ১ লাখ Row থাকলে কী হবে?</p>
+      </div>
+      <div class="ps-arrow">⚡</div>
+      <div class="ps-card solution">
+        <div class="ps-title">❌ পথ ২ — Parallel Training</div>
+        <p>✓ Training অনেক দ্রুত</p>
+        <p>✓ Batch Processing সম্ভব</p>
+        <p>✗ Data Leakage হয়</p>
+        <p>✗ Current Token ভবিষ্যৎ Token দেখে</p>
+        <p>✗ Model চুরি করে শেখে</p>
+      </div>
+    </div>
+
+    <h2 class="sub">Data Leakage কেন সমস্যা?</h2>
+    <p>ধরো Sentence: <strong>"আপ কৈসে হৈঁ"</strong> — সব Token একসাথে Self Attention-এ দেওয়া হলো।</p>
+    <p>"আপ"-এর Contextual Embedding তৈরি করতে:</p>
+
+    <div class="formula-block">
+      <div class="formula-label">আপ-এর Contextual Embedding (ভুল পদ্ধতি)</div>
+      C(আপ) = 0.8 × E(আপ) + 0.1 × E(কৈসে) + 0.1 × E(হৈঁ)
+    </div>
+
+    <div class="highlight-box red">
+      <div class="box-title">🚨 সমস্যা!</div>
+      <p>যখন "আপ" লেখা হয়েছিল, তখন কি "কৈসে" বা "হৈঁ" ছিল? <strong>না।</strong> তাহলে "আপ"-এর Embedding হিসাব করতে "কৈসে" এবং "হৈঁ"-এর Value ব্যবহার করা কীভাবে সঠিক হবে?</p>
+      <p style="margin-top:10px;">এটাই <strong>Data Leakage</strong> — Training-এ মডেলকে ভবিষ্যতের তথ্য দিয়ে দেওয়া, যা Inference-এ পাওয়া যাবে না। মডেল Training Data-তে ভালো Result দেবে, কিন্তু Real World-এ ব্যর্থ হবে।</p>
+    </div>
+
+    <div class="matrix-wrap">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th class="row-head">Token</th>
+            <th>Training-এ পায়</th>
+            <th>Inference-এ পায়</th>
+            <th>সমস্যা?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>আপ</strong></td>
+            <td>আপ + কৈসে + হৈঁ</td>
+            <td>শুধু আপ</td>
+            <td class="highlight">🚨 Leakage</td>
+          </tr>
+          <tr>
+            <td><strong>কৈসে</strong></td>
+            <td>আপ + কৈসে + হৈঁ</td>
+            <td>আপ + কৈসে</td>
+            <td class="highlight">🚨 Leakage</td>
+          </tr>
+          <tr>
+            <td><strong>হৈঁ</strong></td>
+            <td>আপ + কৈসে + হৈঁ</td>
+            <td>আপ + কৈসে + হৈঁ</td>
+            <td class="zero">✅ ঠিক আছে</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:16px;">লক্ষ্য করো — শুধু শেষ Token-এ কোনো সমস্যা নেই। বাকি সব Token-এ Data Leakage ঘটছে। এই সমস্যার সমাধানই হলো <strong>Masking</strong>।</p>
+  </div>
+</div>
+
+<!-- ══════════════════ SECTION 7 — SELF ATTENTION INTERNALS ══════════════════ -->
+<div class="section" id="s7">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon">🧮</div>
+      <div>
+        <div class="section-label">Section 07</div>
+        <div class="section-title">Self Attention-এর ভেতরের কাজ</div>
+      </div>
+    </div>
+
+    <p>Masking বোঝার আগে Self Attention-এর প্রতিটি ধাপ রিভিউ করা দরকার — কারণ এর ভেতরেই Masking-এর সমাধান লুকিয়ে আছে।</p>
+
+    <p><strong>উদাহরণ:</strong> "আপ কৈসে হৈঁ" — এই তিনটি শব্দ Self Attention-এ পাঠানো হবে।</p>
+
+    <h2 class="sub">Step 1 — Embedding তৈরি</h2>
+    <p>প্রতিটি শব্দকে সরাসরি মডেলে দেওয়া যায় না। আগে প্রতিটি শব্দকে Embedding Layer দিয়ে Vector-এ রূপান্তর করতে হয়।</p>
+
+    <div class="diagram-block">
+      <div class="diagram-title">Embedding Creation</div>
+      <pre>
+  <span class="d-yellow">শব্দ</span>        <span class="d-blue">Embedding Layer</span>     <span class="d-green">Embedding Vector</span>
+
+  "আপ"   ──────────────────→   E(আপ)   = [0.2, 0.8, -0.3, ...]
+  "কৈসে" ──────────────────→   E(কৈসে) = [0.5, -0.1, 0.7, ...]
+  "হৈঁ"  ──────────────────→   E(হৈঁ)  = [-0.2, 0.4, 0.9, ...]
+      </pre>
+    </div>
+
+    <h2 class="sub">Step 2 — Query, Key, Value তৈরি</h2>
+    <p>Self Attention Block-এ ৩টি Weight Matrix আছে: <strong>W_Q</strong>, <strong>W_K</strong>, <strong>W_V</strong>। প্রতিটি শব্দের Embedding এই তিনটি Matrix-এর সাথে Dot Product করলে পাওয়া যায় Query (q), Key (k), Value (v) ভেক্টর।</p>
+
+    <div class="diagram-block">
+      <div class="diagram-title">Q, K, V Calculation</div>
+      <pre>
+  E(আপ)   × <span class="d-green">W_Q</span> = <span class="d-yellow">q_আপ</span>    E(আপ)   × <span class="d-blue">W_K</span> = <span class="d-purple">k_আপ</span>    E(আপ)   × <span class="d-red">W_V</span> = <span class="d-green">v_আপ</span>
+  E(কৈসে) × <span class="d-green">W_Q</span> = <span class="d-yellow">q_কৈসে</span>  E(কৈসে) × <span class="d-blue">W_K</span> = <span class="d-purple">k_কৈসে</span>  E(কৈসে) × <span class="d-red">W_V</span> = <span class="d-green">v_কৈসে</span>
+  E(হৈঁ)  × <span class="d-green">W_Q</span> = <span class="d-yellow">q_হৈঁ</span>   E(হৈঁ)  × <span class="d-blue">W_K</span> = <span class="d-purple">k_হৈঁ</span>   E(হৈঁ)  × <span class="d-red">W_V</span> = <span class="d-green">v_হৈঁ</span>
+
+  সব Q ভেক্টর মিলিয়ে → <span class="d-yellow">Q Matrix</span>
+  সব K ভেক্টর মিলিয়ে → <span class="d-purple">K Matrix</span>
+  সব V ভেক্টর মিলিয়ে → <span class="d-green">V Matrix</span>
+      </pre>
+    </div>
+
+    <h2 class="sub">Step 3 — Attention Score তৈরি</h2>
+    <p>Q এবং K Matrix-এর Dot Product করলে একটি Attention Score Matrix পাওয়া যায়। এরপর স্কেলিং ও Softmax প্রয়োগ করা হয়।</p>
+
+    <div class="formula-block">
+      <div class="formula-label">Scaled Dot-Product Attention</div>
+      Attention(Q, K, V) = Softmax( Q·Kᵀ / √d_k ) · V
+
+      যেখানে d_k = Key Vector-এর Dimension
+    </div>
+
+    <div class="diagram-block">
+      <div class="diagram-title">Attention Score Matrix (Softmax-এর পরে)</div>
+      <pre>
+                <span class="d-yellow">আপ</span>        <span class="d-blue">কৈসে</span>      <span class="d-green">হৈঁ</span>
+  <span class="d-yellow">আপ</span>   │  <span class="d-yellow">w11=0.8</span>  <span class="d-red">w12=0.1</span>  <span class="d-red">w13=0.1</span>  │
+  <span class="d-blue">কৈসে</span> │  <span class="d-yellow">w21=0.15</span> <span class="d-blue">w22=0.75</span> <span class="d-red">w23=0.1</span>  │
+  <span class="d-green">হৈঁ</span>  │  <span class="d-yellow">w31=0.1</span>  <span class="d-blue">w32=0.2</span>  <span class="d-green">w33=0.7</span>  │
+
+  <span class="d-red">লাল = সমস্যাজনক (Future Token দেখছে)</span>
+  <span class="d-yellow">হলুদ = নিজের Contribution</span>
+  <span class="d-blue">নীল = অতীত Token থেকে (ঠিক আছে)</span>
+      </pre>
+    </div>
+
+    <h2 class="sub">Step 4 — Contextual Embedding তৈরি</h2>
+    <p>এই Weight Matrix দিয়ে Value Vectors-কে Weighted Sum করলে প্রতিটি শব্দের Contextual Embedding পাওয়া যায়:</p>
+
+    <div class="formula-block">
+      <div class="formula-label">Contextual Embedding Calculation</div>
+C(আপ)   = w11×v_আপ + <span style="color:var(--accent4)">w12×v_কৈসে + w13×v_হৈঁ</span>  ← এই দুটো থাকা উচিত নয়!
+
+C(কৈসে) = w21×v_আপ + w22×v_কৈসে + <span style="color:var(--accent4)">w23×v_হৈঁ</span>   ← এটা থাকা উচিত নয়!
+
+C(হৈঁ)  = w31×v_আপ + w32×v_কৈসে + w33×v_হৈঁ  ← এটা সঠিক ✅
+    </div>
+
+    <div class="highlight-box red">
+      <div class="box-title">🚨 সমস্যার কেন্দ্র</div>
+      <p>"আপ"-এর Contextual Embedding তৈরিতে "কৈসে" ও "হৈঁ"-এর Contribution থাকছে। কিন্তু যখন "আপ" লেখা হয়েছিল, তখন এই শব্দগুলো ছিল না! এই w12, w13, w23 — তিনটি Weight-কে Zero করতে পারলেই সমস্যা সমাধান।</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SECTION 8 — MASKING ══════════════════ -->
+<div class="section section-alt" id="s8">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon">🎭</div>
+      <div>
+        <div class="section-label">Section 08</div>
+        <div class="section-title">Masking — সমস্যার সমাধান</div>
+      </div>
+    </div>
+
+    <p>w12, w13, w23 কে Zero করার উপায় কী? এখানেই আসে <strong>Masking</strong>-এর কৌশল।</p>
+
+    <h2 class="sub">Mask Matrix তৈরি করো</h2>
+    <p>Softmax চালানোর আগের Scaled Score Matrix-এর সাথে একই Dimension-এর একটি Mask Matrix তৈরি করো। যেখানে যেখানে Value Zero করতে চাই, সেখানে <strong>−∞ (Minus Infinity)</strong> বসাও।</p>
+
+    <div class="diagram-block">
+      <div class="diagram-title">Mask Matrix</div>
+      <pre>
+                <span class="d-yellow">আপ</span>      <span class="d-blue">কৈসে</span>    <span class="d-green">হৈঁ</span>
+  <span class="d-yellow">আপ</span>   │    0      <span class="d-red">-∞</span>      <span class="d-red">-∞</span>   │  ← আপ শুধু নিজেকে দেখতে পাবে
+  <span class="d-blue">কৈসে</span> │    0       0      <span class="d-red">-∞</span>   │  ← কৈসে, আপ ও নিজেকে দেখতে পাবে
+  <span class="d-green">হৈঁ</span>  │    0       0       0   │  ← হৈঁ, সবাইকে দেখতে পাবে
+      </pre>
+    </div>
+
+    <h2 class="sub">Mask যোগ করো Score-এ</h2>
+    <div class="diagram-block">
+      <div class="diagram-title">Score Matrix + Mask Matrix</div>
+      <pre>
+  Score Matrix         Mask Matrix          Result Matrix
+  ┌─────────────┐   ┌─────────────┐    ┌─────────────────┐
+  │  s11  s12  s13│ + │  0   -∞   -∞│  = │  s11   -∞    -∞  │
+  │  s21  s22  s23│   │  0    0   -∞│    │  s21   s22   -∞  │
+  │  s31  s32  s33│   │  0    0    0│    │  s31   s32   s33 │
+  └─────────────┘   └─────────────┘    └─────────────────┘
+      </pre>
+    </div>
+
+    <h2 class="sub">Softmax চালাও</h2>
+    <div class="highlight-box green">
+      <div class="box-title">✨ Softmax-এর জাদু</div>
+      <p><strong>Softmax(-∞) = 0</strong> — এটা গণিতের একটি মৌলিক সত্য। যেখানে −∞ আছে, সেখানে Softmax প্রয়োগ করলে 0 পাওয়া যায়। ফলে সেই Weight গুলো শূন্য হয়ে যায়।</p>
+    </div>
+
+    <div class="diagram-block">
+      <div class="diagram-title">Softmax-এর পরে — Final Weight Matrix</div>
+      <pre>
+                <span class="d-yellow">আপ</span>      <span class="d-blue">কৈসে</span>    <span class="d-green">হৈঁ</span>
+  <span class="d-yellow">আপ</span>   │   <span class="d-yellow">1.0</span>     <span class="d-green">0.0</span>     <span class="d-green">0.0</span>  │  ← শুধু নিজের Value ব্যবহার
+  <span class="d-blue">কৈসে</span> │   <span class="d-yellow">0.15</span>    <span class="d-yellow">0.85</span>    <span class="d-green">0.0</span>  │  ← হৈঁ-এর Value শূন্য হয়ে গেছে
+  <span class="d-green">হৈঁ</span>  │   <span class="d-yellow">0.1</span>     <span class="d-yellow">0.2</span>     <span class="d-yellow">0.7</span>  │  ← সব Value ব্যবহার করতে পারে
+
+  <span class="d-green">সবুজ = শূন্য হয়ে গেছে (Data Leakage বন্ধ)</span>
+  <span class="d-yellow">হলুদ = বৈধ Contribution (অতীত ও বর্তমান)</span>
+      </pre>
+    </div>
+
+    <h2 class="sub">এখন Contextual Embedding সঠিক!</h2>
+    <div class="formula-block">
+      <div class="formula-label">Masked Self Attention — সঠিক ফলাফল</div>
+C(আপ)   = 1.0 × v_আপ + 0.0 × v_কৈসে + 0.0 × v_হৈঁ
+        = শুধু নিজের Value ব্যবহার ✅ (ভবিষ্যত দেখে না)
+
+C(কৈসে) = 0.15 × v_আপ + 0.85 × v_কৈসে + 0.0 × v_হৈঁ
+        = অতীত (আপ) ও বর্তমান (কৈসে) ব্যবহার ✅
+
+C(হৈঁ)  = 0.1 × v_আপ + 0.2 × v_কৈসে + 0.7 × v_হৈঁ
+        = সব Token ব্যবহার করতে পারে ✅
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="sc-icon">⚡</div>
+        <div class="sc-title">Training Speed</div>
+        <div class="sc-value" style="color:var(--accent3);">FAST ✓</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-icon">🛡️</div>
+        <div class="sc-title">Data Leakage</div>
+        <div class="sc-value" style="color:var(--accent3);">NONE ✓</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-icon">🔄</div>
+        <div class="sc-title">Parallel Processing</div>
+        <div class="sc-value" style="color:var(--accent3);">YES ✓</div>
+      </div>
+    </div>
+
+    <div class="highlight-box green" style="margin-top:8px;">
+      <div class="box-title">🏆 Best of Both Worlds!</div>
+      <p>Masking-এর মাধ্যমে আমরা পেলাম — <strong>Parallel Processing</strong> (Fast Training) + <strong>No Data Leakage</strong> (Correct Behavior)। এটাই Masked Multi-Head Attention-এর মূল অবদান।</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SECTION 9 — VISUAL DIAGRAMS ══════════════════ -->
+<div class="section" id="s9">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon">🎨</div>
+      <div>
+        <div class="section-label">Section 09</div>
+        <div class="section-title">Visual Diagrams ও Flow Charts</div>
+      </div>
+    </div>
+
+    <h2 class="sub">পূর্ণ Masked Self Attention Flow</h2>
+    <div class="diagram-block">
+      <div class="diagram-title">Complete Masked Self Attention — Step by Step</div>
+      <pre>
+  INPUT: "আপ", "কৈসে", "হৈঁ"
+     │
+     ▼
+  ┌─────────────────────────────────────────┐
+  │         EMBEDDING LAYER                 │
+  │  "আপ" → E(আপ)  "কৈসে" → E(কৈসে)  "হৈঁ" → E(হৈঁ)  │
+  └─────────────────────────────────────────┘
+     │
+     ▼
+  ┌─────────────────────────────────────────┐
+  │         Q, K, V PROJECTION              │
+  │  E × W_Q → Q Matrix (Query)             │
+  │  E × W_K → K Matrix (Key)               │
+  │  E × W_V → V Matrix (Value)             │
+  └─────────────────────────────────────────┘
+     │
+     ▼
+  ┌─────────────────────────────────────────┐
+  │         SCALED DOT PRODUCT              │
+  │  Score = Q · Kᵀ / √d_k                 │
+  │                                         │
+  │  ┌──────────────────────────────────┐   │
+  │  │  s11    s12    s13               │   │
+  │  │  s21    s22    s23               │   │
+  │  │  s31    s32    s33               │   │
+  │  └──────────────────────────────────┘   │
+  └─────────────────────────────────────────┘
+     │
+     ▼
+  ┌─────────────────────────────────────────┐
+  │    ★ MASKING (এটাই নতুন!) ★            │
+  │                                         │
+  │  Score + Mask:                          │
+  │  ┌──────────────────────────────────┐   │
+  │  │  s11    -∞     -∞               │   │
+  │  │  s21    s22    -∞               │   │
+  │  │  s31    s32    s33              │   │
+  │  └──────────────────────────────────┘   │
+  └─────────────────────────────────────────┘
+     │
+     ▼
+  ┌─────────────────────────────────────────┐
+  │         SOFTMAX                         │
+  │  Softmax(-∞) = 0                        │
+  │                                         │
+  │  ┌──────────────────────────────────┐   │
+  │  │  1.0    0.0    0.0              │   │
+  │  │  0.15   0.85   0.0              │   │
+  │  │  0.10   0.20   0.70             │   │
+  │  └──────────────────────────────────┘   │
+  └─────────────────────────────────────────┘
+     │
+     ▼
+  ┌─────────────────────────────────────────┐
+  │         WEIGHTED SUM WITH V             │
+  │  C(আপ)   = 1.0 × v_আপ                 │
+  │  C(কৈসে) = 0.15×v_আপ + 0.85×v_কৈসে   │
+  │  C(হৈঁ)  = 0.1×v_আপ+0.2×v_কৈসে+0.7×v_হৈঁ│
+  └─────────────────────────────────────────┘
+     │
+     ▼
+  OUTPUT: Contextual Embeddings (No Future Leakage!)
+      </pre>
+    </div>
+
+    <h2 class="sub">Inference vs Training — পার্থক্যের চিত্র</h2>
+    <div class="diagram-block">
+      <div class="diagram-title">Inference (Autoregressive) vs Training (Non-Autoregressive with Masking)</div>
+      <pre>
+  <span class="d-yellow">═══════════════════ INFERENCE ═══════════════════</span>
+  
+  Time Step 1:  [START]  ──→  Decoder ──→  "মৈ"
+  Time Step 2:  [মৈ]     ──→  Decoder ──→  "ঘটিয়া"  (ভুল হলেও চলে)
+  Time Step 3:  [ঘটিয়া] ──→  Decoder ──→  "হূঁ"
+  Time Step 4:  [হূঁ]    ──→  Decoder ──→  [END]
+  
+  👉 Sequential, একটার পর একটা, আগেরটা না হলে পরেরটা নয়
+  👉 Autoregressive → মজবুরি, এড়ানোর উপায় নেই
+
+  <span class="d-blue">═══════════════════ TRAINING ════════════════════</span>
+  
+  Dataset থেকে সরাসরি নেওয়া:
+  Input:  [START]  [মৈ]     [বঢ়িয়া]  [হূঁ]
+               ↓        ↓        ↓         ↓
+         Parallel Processing (সব একসাথে!)
+               ↓        ↓        ↓         ↓
+  Output: [মৈ]    [বঢ়িয়া]  [হূঁ]     [END]
+  
+  👉 কিন্তু "মৈ" [বঢ়িয়া] ও [হূঁ] দেখতে পাবে না — Masking!
+  👉 Non-Autoregressive + Masking = সঠিক ও দ্রুত
+      </pre>
+    </div>
+
+    <h2 class="sub">Triangle Mask — কেন Triangular?</h2>
+    <div class="diagram-block">
+      <div class="diagram-title">Lower Triangular Mask Pattern</div>
+      <pre>
+  Token ৩টি হলে Mask দেখতে এরকম:
+
+         T1   T2   T3
+    T1 │  ✅   ❌   ❌ │  → T1 শুধু নিজেকে দেখে
+    T2 │  ✅   ✅   ❌ │  → T2, T1 ও নিজেকে দেখে  
+    T3 │  ✅   ✅   ✅ │  → T3, সবাইকে দেখে
+
+  এটা একটা Lower Triangular Matrix!
+  ✅ = 0 (Mask-এ)  →  Score যেমন ছিল তেমনই থাকে
+  ❌ = -∞ (Mask-এ) →  Softmax করলে 0 হয়ে যায়
+
+  Token ৫টি হলে:
+  
+         T1  T2  T3  T4  T5
+    T1 │ ✅  ❌  ❌  ❌  ❌ │
+    T2 │ ✅  ✅  ❌  ❌  ❌ │
+    T3 │ ✅  ✅  ✅  ❌  ❌ │
+    T4 │ ✅  ✅  ✅  ✅  ❌ │
+    T5 │ ✅  ✅  ✅  ✅  ✅ │
+      </pre>
+    </div>
+
+    <h2 class="sub">Seq2Seq LSTM vs Transformer Decoder</h2>
+    <div class="diagram-block">
+      <div class="diagram-title">পুরনো Seq2Seq (LSTM) আর্কিটেকচার</div>
+      <pre>
+  INPUT: "Nice to meet you"
+
+  ENCODER (LSTM):
+  "Nice" → LSTM → h1
+             ↓
+  "to"   → LSTM → h2
+             ↓  
+  "meet" → LSTM → h3
+             ↓
+  "you"  → LSTM → h4 → <span class="d-yellow">Context Vector</span> = (h4, c4)
+
+  DECODER (LSTM):
+  <span class="d-yellow">Context</span> + [START] → LSTM → "আপসে"
+  <span class="d-yellow">Context</span> + "আপসে"  → LSTM → "মিলকর"
+  <span class="d-yellow">Context</span> + "মিলকর" → LSTM → "আচ্ছা"
+  <span class="d-yellow">Context</span> + "আচ্ছা"  → LSTM → "লাগা"
+  <span class="d-yellow">Context</span> + "লাগা"   → LSTM → [END]
+
+  → এটাও Autoregressive, কিন্তু Transformer-এর মতো Parallel Training নেই
+      </pre>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SECTION 10 — SUMMARY ══════════════════ -->
+<div class="section" id="s10">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-icon">📋</div>
+      <div>
+        <div class="section-label">Section 10</div>
+        <div class="section-title">পূর্ণ সারসংক্ষেপ</div>
+      </div>
+    </div>
+
+    <h2 class="sub">পুরো Journey এক নজরে</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">১</div>
+        <div class="step-content">
+          <div class="step-title">Transformer Decoder → Autoregressive at Inference</div>
+          <div class="step-desc">Inference-এ প্রতিটি Output Token আগের Output Token-এর উপর নির্ভর করে। এটা Mandatory — Sequential Data-এ এর কোনো বিকল্প নেই।</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">২</div>
+        <div class="step-content">
+          <div class="step-title">Training → Teacher Forcing ব্যবহার</div>
+          <div class="step-desc">Training-এ পরের Step-এর Input সবসময় Dataset থেকে নেওয়া হয়। আগের Step কী Output দিল তা বিবেচনা করা হয় না।</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৩</div>
+        <div class="step-content">
+          <div class="step-title">Parallel Training চাই, কিন্তু Data Leakage বন্ধ করতে হবে</div>
+          <div class="step-desc">Teacher Forcing-এর কারণে সব Steps Independent। Parallel Processing সম্ভব। কিন্তু সরাসরি Parallel করলে Current Token ভবিষ্যতের Token দেখে ফেলে → Data Leakage।</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৪</div>
+        <div class="step-content">
+          <div class="step-title">Self Attention-এর Weight Matrix-এ সমস্যা</div>
+          <div class="step-desc">w12, w13, w23 এই Weight-গুলো ভবিষ্যতের Token-এর Contribution রাখছে। এদের Zero করতে হবে।</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৫</div>
+        <div class="step-content">
+          <div class="step-title">Masking — Lower Triangular Mask দিয়ে সমাধান</div>
+          <div class="step-desc">Softmax-এর আগে Score Matrix-এ Mask যোগ করো। ভবিষ্যৎ Position-এ −∞ বসাও। Softmax(-∞) = 0 হয়। ফলে ভবিষ্যৎ Token-এর Contribution শূন্য।</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">৬</div>
+        <div class="step-content">
+          <div class="step-title">Best of Both Worlds — Fast + Correct</div>
+          <div class="step-desc">এখন Training Parallel (Fast) + Data Leakage নেই (Correct)। Inference এখনও Autoregressive (Mandatory)। Training Non-Autoregressive + Masked = Perfect।</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sep"><div class="sep-line"></div><div class="sep-text">মূল ধারণাগুলো</div><div class="sep-line"></div></div>
+
+    <div class="pill-row">
+      <span class="pill pill-yellow">Autoregressive = পূর্ববর্তী Output-এর উপর নির্ভর</span>
+      <span class="pill pill-blue">Teacher Forcing = Dataset থেকে সঠিক Input দেওয়া</span>
+      <span class="pill pill-green">Masking = ভবিষ্যৎ Token লুকানো</span>
+      <span class="pill pill-red">Data Leakage = Training-এ চুরির তথ্য</span>
+      <span class="pill pill-purple">Non-Autoregressive = Parallel Processing</span>
+    </div>
+
+    <div class="key-sentence" style="margin-top:36px;">
+      <p>"Masked Self Attention আমাদের দেয় <span>Training-এর গতি</span> (Parallel Processing) এবং <span>Inference-এর সততা</span> (No Future Token Access) — একই সাথে। এটাই এই Mechanism-এর সৌন্দর্য।"</p>
+    </div>
+
+    <div class="highlight-box" style="margin-top:28px;">
+      <div class="box-title">🔮 পরবর্তী কী?</div>
+      <p>Masked Multi-Head Attention বোঝা হয়ে গেছে — এটা Decoder-এর প্রথম Building Block। পরবর্তীতে আসবে <strong>Cross Attention</strong> (Encoder থেকে ২টি Arrow, Decoder থেকে ১টি Arrow) এবং তারপর পুরো Decoder Architecture এক ভিডিওতে।</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ BONUS SECTIONS FROM Q&A ══════════════════ -->
+<div class="container" style="margin-top:0; padding-bottom:20px;">
+
+  <!-- SECTION: Parallel vs Sequential in Decoder -->
+  <div class="section-block">
+    <div class="section-header">
+      <div class="section-icon">❓</div>
+      <div>
+        <div class="section-tag">প্রশ্নোত্তর সিরিজ — গভীর বিশ্লেষণ</div>
+        <h2 class="section-title">Decoder-এ Vector কি Parallel যায় নাকি Sequential?</h2>
+      </div>
+    </div>
+
+    <p class="body-text">এই প্রশ্নটির উত্তর নির্ভর করে <strong>Training</strong> নাকি <strong>Inference</strong> — সেটার উপর। দুটো ক্ষেত্রে আচরণ সম্পূর্ণ আলাদা।</p>
+
+    <div class="two-col" style="margin-top:24px;">
+      <div class="highlight-box" style="border-left-color:#00d4aa;">
+        <div class="box-title" style="color:#00d4aa;">🚀 Training-এর সময় → Parallel</div>
+        <p>Training-এ <strong>Teacher Forcing</strong> ব্যবহার করা হয় এবং <strong>Masking</strong> থাকে, তাই সব Vector একসাথে Decoder-এ পাঠানো যায়। আগের output-এর জন্য অপেক্ষা করতে হয় না।</p>
+      </div>
+      <div class="highlight-box" style="border-left-color:#f0a500;">
+        <div class="box-title" style="color:#f0a500;">🐢 Inference-এর সময় → Sequential</div>
+        <p>Inference-এ সঠিক উত্তর আমাদের কাছে নেই। তাই মডেলের নিজের output-ই পরের step-এর input হয়। এটা <strong>Autoregressive Loop</strong>।</p>
+      </div>
+    </div>
+
+    <!-- Key insight: Backpropagation timing -->
+    <div class="highlight-box" style="margin-top:24px; border-left-color:#bb86fc;">
+      <div class="box-title" style="color:#bb86fc;">🔑 গুরুত্বপূর্ণ প্রশ্ন: প্রথম output বের হলেই কি Backpropagation হয়?</div>
+      <p><strong>না।</strong> কখনোই একটি মাত্র শব্দ বের হওয়ার সাথে সাথে Weight Update হয় না। পুরো প্রক্রিয়াটি এভাবে কাজ করে:</p>
+      <ol style="color:var(--text-secondary); padding-left:20px; margin-top:12px; line-height:2;">
+        <li>পুরো Sentence-এর সব output আগে বের হয়</li>
+        <li>সবগুলো output-এর Loss আলাদা আলাদা calculate হয়</li>
+        <li>সব Loss যোগ করে একটি <strong>Total Loss</strong> বের করা হয়</li>
+        <li>এই Total Loss-এর উপর ভিত্তি করে <strong>মাত্র ১ বার</strong> Backpropagation চলে</li>
+        <li>সব Weight একসাথে Update হয়</li>
+      </ol>
+    </div>
+
+    <!-- ASCII Diagram: Parallel Training -->
+    <div class="diagram-title">📊 Diagram — Training-এ Parallel Processing</div>
+    <div class="ascii-diagram">
+TRAINING INPUT (Teacher Forcing + Masking):
+════════════════════════════════════════════════════════
+
+  Decoder Input:  [START]    "আমি"     "ভালো"
+                     │          │          │
+                     ▼          ▼          ▼
+               ┌─────────────────────────────────┐
+               │    Masked Self-Attention         │
+               │  (সব ৩টি একসাথে প্রসেস হয়)     │
+               └─────────────────────────────────┘
+                     │          │          │
+                     ▼          ▼          ▼
+  Decoder Output: "তুমি"    "খারাপ"    "আছি"
+  Target:          "আমি"    "ভালো"     "আছি"
+                     │          │          │
+                     ▼          ▼          ▼
+  Loss:           Loss 1  +  Loss 2  +  Loss 3
+                     └──────────┴──────────┘
+                                │
+                         Total Loss = L1+L2+L3
+                                │
+                                ▼
+                    ┌─────────────────────┐
+                    │  Backpropagation    │  ← মাত্র ১ বার!
+                    │  (১ বার চলে)       │
+                    └─────────────────────┘
+                                │
+                                ▼
+                       Weight Update হয়
+    </div>
+  </div>
+
+  <!-- SECTION: Teacher Forcing Deep Dive -->
+  <div class="section-block" style="margin-top:48px;">
+    <div class="section-header">
+      <div class="section-icon">👨‍🏫</div>
+      <div>
+        <div class="section-tag">গভীর বিশ্লেষণ</div>
+        <h2 class="section-title">Teacher Forcing — Loss কীভাবে Calculate হয়?</h2>
+      </div>
+    </div>
+
+    <p class="body-text">Teacher Forcing মানে input সঠিক দেওয়া। কিন্তু তাহলে কি Loss হওয়ার সুযোগ থাকে? — হ্যাঁ, কারণ <strong>Loss হিসাব হয় Output-এর উপর, Input-এর উপর নয়।</strong></p>
+
+    <div class="highlight-box" style="border-left-color:#ff6b9d; margin-top:20px;">
+      <div class="box-title" style="color:#ff6b9d;">⚠️ সবচেয়ে বড় ভুল ধারণা</div>
+      <p>Teacher Forcing মানে মডেলের ভুল "ঠিক করে দেওয়া" নয়। এটা শুধু পরের step-এ সঠিক <em>ইনপুট</em> দেয়। মডেল আউটপুটে যে ভুল করে, সেটার Loss ঠিকই হিসাব হয়।</p>
+    </div>
+
+    <!-- Step by step example -->
+    <div class="diagram-title" style="margin-top:24px;">📋 উদাহরণ — Target: "আমি ভালো আছি"</div>
+
+    <div class="step-container" style="margin-top:16px;">
+      <div class="step-item">
+        <div class="step-badge" style="background:linear-gradient(135deg,#00d4aa,#00a882);">১</div>
+        <div class="step-content">
+          <div class="step-title">Input: [START] → Output: "তুমি" ❌</div>
+          <p>হওয়া উচিত ছিল "আমি"। Loss 1 = distance("তুমি", "আমি") হিসাব হলো এবং মেমোরিতে রাখা হলো।</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge" style="background:linear-gradient(135deg,#f0a500,#cc8800);">২</div>
+        <div class="step-content">
+          <div class="step-title">Teacher Forcing: Input = "আমি" (Dataset থেকে, "তুমি" নয়!)</div>
+          <p>মডেল "তুমি" বললেও আমরা পরের step-এ Dataset থেকে সঠিক "আমি" input দিই। এতে Error Accumulation বন্ধ হয়।</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge" style="background:linear-gradient(135deg,#bb86fc,#9a5fd6);">৩</div>
+        <div class="step-content">
+          <div class="step-title">Input: "আমি" → Output: "খারাপ" ❌</div>
+          <p>হওয়া উচিত ছিল "ভালো"। Loss 2 = distance("খারাপ", "ভালো") হিসাব হলো।</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge" style="background:linear-gradient(135deg,#4fc3f7,#0288d1);">৪</div>
+        <div class="step-content">
+          <div class="step-title">Input: "ভালো" → Output: "আছি" ✓</div>
+          <p>এবার সঠিক! Loss 3 = 0 (বা খুব কম)।</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge" style="background:linear-gradient(135deg,#ff6b9d,#cc3366);">৫</div>
+        <div class="step-content">
+          <div class="step-title">Total Loss → Backpropagation → Weight Update</div>
+          <p>Total Loss = Loss 1 + Loss 2 + Loss 3। এই একটি সংখ্যার উপর ভিত্তি করে ১ বার Backpropagation, তারপর Weight Update।</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="comparison-table" style="margin-top:28px;">
+      <table>
+        <thead>
+          <tr>
+            <th>বিষয়</th>
+            <th>Teacher Forcing ছাড়া</th>
+            <th>Teacher Forcing সহ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>পরের step-এর Input</td>
+            <td>মডেলের নিজের ভুল output</td>
+            <td>Dataset-এর সঠিক word</td>
+          </tr>
+          <tr>
+            <td>Error Accumulation</td>
+            <td>❌ আছে (ভুলের উপর ভুল)</td>
+            <td>✅ নেই</td>
+          </tr>
+          <tr>
+            <td>Training Stability</td>
+            <td>❌ অস্থির</td>
+            <td>✅ স্থিতিশীল</td>
+          </tr>
+          <tr>
+            <td>Loss Calculation</td>
+            <td>Output-এর উপর</td>
+            <td>Output-এর উপর (একই!)</td>
+          </tr>
+          <tr>
+            <td>Backpropagation</td>
+            <td>১ বার (Total Loss-এ)</td>
+            <td>১ বার (Total Loss-এ)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTION: Inference Loop Details -->
+  <div class="section-block" style="margin-top:48px;">
+    <div class="section-header">
+      <div class="section-icon">🔄</div>
+      <div>
+        <div class="section-tag">Inference বিশ্লেষণ</div>
+        <h2 class="section-title">Real-time Prediction-এ Sequential Loop কীভাবে কাজ করে</h2>
+      </div>
+    </div>
+
+    <p class="body-text">Inference-এ আমাদের কাছে কোনো সঠিক উত্তর নেই। তাই Teacher Forcing সম্ভব নয়। মডেল নিজের output দিয়েই পরের step-এ এগোয়।</p>
+
+    <div class="highlight-box" style="border-left-color:#00d4aa; margin:20px 0;">
+      <div class="box-title" style="color:#00d4aa;">❓ Inference-এ কি Masking লাগে?</div>
+      <p><strong>না।</strong> Inference-এ Masking-এর প্রয়োজন নেই। কারণ ভবিষ্যতের শব্দগুলো তখনো তৈরিই হয়নি — চুরি করে দেখার কোনো সুযোগই নেই!</p>
+    </div>
+
+    <div class="ascii-diagram">
+INFERENCE TIME — Autoregressive Loop:
+════════════════════════════════════════════════════════════════
+(Target: "আমি ভালো আছি" — কিন্তু মডেল এটা জানে না)
+
+Step 1:
+  Decoder Input:  [START]
+  Encoder Output: → (source sentence context, fixed)
+  ─────────────────────────────────────────
+  Decoder Predicts: "আমি" ✓
+  → "আমি" এখন input-এ যোগ হলো
+
+Step 2:
+  Decoder Input:  [START] → "আমি"
+  Encoder Output: → (same, unchanged)
+  ─────────────────────────────────────────
+  Decoder Predicts: "ভালো" ✓
+  → "ভালো" এখন input-এ যোগ হলো
+
+Step 3:
+  Decoder Input:  [START] → "আমি" → "ভালো"
+  Encoder Output: → (same, unchanged)
+  ─────────────────────────────────────────
+  Decoder Predicts: "আছি" ✓
+  → "আছি" এখন input-এ যোগ হলো
+
+Step 4:
+  Decoder Input:  [START] → "আমি" → "ভালো" → "আছি"
+  Decoder Predicts: [END]
+  ─────────────────────────────────────────
+  ✅ [END] Token পেলেই Loop বন্ধ!
+  Final Output: "আমি ভালো আছি"
+
+⚠️  এই Loop শুধু DECODER-এ চলে।
+    ENCODER একবারই (Parallel) কাজ করে — তারপর চুপ।
+    </div>
+
+    <div class="two-col" style="margin-top:24px;">
+      <div class="highlight-box" style="border-left-color:#4fc3f7;">
+        <div class="box-title" style="color:#4fc3f7;">🏗️ Encoder-এর কাজ (No Loop)</div>
+        <p>Encoder শুধু <strong>একবার</strong> পুরো source sentence Parallel-এ process করে। তারপর তার কাজ শেষ। সে Decoder-কে context দেয় এবং চুপ থাকে।</p>
+      </div>
+      <div class="highlight-box" style="border-left-color:#bb86fc;">
+        <div class="box-title" style="color:#bb86fc;">🔄 Decoder-এর কাজ (Loop!)</div>
+        <p>Decoder-ই একমাত্র অংশ যেখানে Inference-এ <strong>Autoregressive Loop</strong> চলে। প্রতি iteration-এ একটি নতুন word তৈরি হয়, [END] আসা পর্যন্ত।</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION: Cross Attention Preview -->
+  <div class="section-block" style="margin-top:48px;">
+    <div class="section-header">
+      <div class="section-icon">🌉</div>
+      <div>
+        <div class="section-tag">পরবর্তী Topic — Preview</div>
+        <h2 class="section-title">Cross-Attention — Encoder ও Decoder-এর সংযোগ</h2>
+      </div>
+    </div>
+
+    <p class="body-text">Masked Self-Attention-এর পরে Decoder-এর দ্বিতীয় বড় Block হলো <strong>Cross-Attention</strong> (Encoder-Decoder Attention)। এখানে Encoder ও Decoder প্রথমবার সরাসরি "কথা বলে"।</p>
+
+    <div class="highlight-box" style="border-left-color:#f0a500; margin-top:20px;">
+      <div class="box-title" style="color:#f0a500;">🤔 Cross-Attention কেন দরকার?</div>
+      <p>Masked Self-Attention-এ Decoder শুধু নিজের তৈরি শব্দগুলো দেখে। কিন্তু সে জানে না Source sentence কী ছিল! Cross-Attention-এ Decoder, Encoder-এর কাছ থেকে source sentence-এর information নেয়।</p>
+    </div>
+
+    <div class="ascii-diagram" style="margin-top:24px;">
+SELF-ATTENTION vs CROSS-ATTENTION — Q, K, V-এর পার্থক্য:
+════════════════════════════════════════════════════════════════
+
+  ┌─────────────────────────────────────────────────────────┐
+  │           SELF-ATTENTION (Encoder বা Masked)            │
+  │                                                         │
+  │  Query (Q) ──┐                                          │
+  │  Key   (K) ──┼──→ সবই একই জায়গা থেকে আসে             │
+  │  Value (V) ──┘    (নিজের embedding থেকে)               │
+  └─────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────┐
+  │                  CROSS-ATTENTION                        │
+  │                                                         │
+  │  Query (Q) ──→ DECODER থেকে আসে                        │
+  │                  "আমি এখন এখানে আছি, কী দরকার?"       │
+  │                                                         │
+  │  Key   (K) ──→ ENCODER থেকে আসে                        │
+  │  Value (V) ──→ ENCODER থেকে আসে                        │
+  │                  "আমার কাছে source-এর পুরো অর্থ আছে"   │
+  └─────────────────────────────────────────────────────────┘
+
+উদাহরণ (বই অনুবাদ):
+  Masked Self-Attention = নিজের বাংলা খাতা পড়ে পরের শব্দ ভাবা
+  Cross-Attention       = মূল ইংরেজি বই দেখে মিলিয়ে নেওয়া
+    </div>
+
+    <div class="comparison-table" style="margin-top:24px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Attention Type</th>
+            <th>Query (Q) আসে</th>
+            <th>Key (K) আসে</th>
+            <th>Value (V) আসে</th>
+            <th>কাজ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:#00d4aa;">Encoder Self-Attention</strong></td>
+            <td>Encoder</td>
+            <td>Encoder</td>
+            <td>Encoder</td>
+            <td>Source বোঝা</td>
+          </tr>
+          <tr>
+            <td><strong style="color:#f0a500;">Masked Self-Attention</strong></td>
+            <td>Decoder</td>
+            <td>Decoder</td>
+            <td>Decoder</td>
+            <td>Output তৈরি</td>
+          </tr>
+          <tr>
+            <td><strong style="color:#bb86fc;">Cross-Attention</strong></td>
+            <td>Decoder</td>
+            <td>Encoder</td>
+            <td>Encoder</td>
+            <td>দুজনের সংযোগ</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTION: Complete Summary -->
+  <div class="section-block" style="margin-top:48px; margin-bottom:48px;">
+    <div class="section-header">
+      <div class="section-icon">🗂️</div>
+      <div>
+        <div class="section-tag">চূড়ান্ত সারসংক্ষেপ</div>
+        <h2 class="section-title">Training vs Inference — সম্পূর্ণ তুলনা</h2>
+      </div>
+    </div>
+
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr>
+            <th>বিষয়</th>
+            <th>Training</th>
+            <th>Inference (Real-time)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Processing Mode</strong></td>
+            <td>✅ Parallel (একসাথে)</td>
+            <td>🔄 Sequential (একটার পর একটা)</td>
+          </tr>
+          <tr>
+            <td><strong>Input Source</strong></td>
+            <td>Dataset-এর সঠিক word (Teacher Forcing)</td>
+            <td>মডেলের নিজের আগের output</td>
+          </tr>
+          <tr>
+            <td><strong>Masking</strong></td>
+            <td>✅ জরুরি (Data Leakage ঠেকাতে)</td>
+            <td>❌ দরকার নেই (Future আসেইনি)</td>
+          </tr>
+          <tr>
+            <td><strong>Encoder কাজ করে</strong></td>
+            <td>১ বার (Parallel)</td>
+            <td>১ বার (Parallel) — তারপর চুপ</td>
+          </tr>
+          <tr>
+            <td><strong>Decoder কাজ করে</strong></td>
+            <td>১ বার (Parallel, সব token একসাথে)</td>
+            <td>বারবার Loop-এ (প্রতি token-এ)</td>
+          </tr>
+          <tr>
+            <td><strong>Weight Update</strong></td>
+            <td>✅ হয় (Total Loss-এ, ১ বার)</td>
+            <td>❌ হয় না (Frozen weights)</td>
+          </tr>
+          <tr>
+            <td><strong>Backpropagation</strong></td>
+            <td>✅ হয় (১ বার, শেষে)</td>
+            <td>❌ হয় না</td>
+          </tr>
+          <tr>
+            <td><strong>কখন শেষ হয়</strong></td>
+            <td>সব epochs শেষে</td>
+            <td>[END] Token generate হলে</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="key-sentence" style="margin-top:32px;">
+      <p>"Training-এ Transformer শেখে <span>Parallel</span>-এ, কিন্তু কাজ করে <span>Sequential</span>-এ। Teacher Forcing ও Masking এই দুই জগতের সেতু।"</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════ FOOTER ══════════════════ -->
+<div class="footer">
+  <div class="container">
+    <p>Deep Learning Series — Transformer Architecture</p>
+    <p style="margin-top:8px;"><strong>Masked Multi-Head Attention</strong> · Decoder Building Block · Technical Guide in Bengali</p>
+    <p style="margin-top:16px; font-size:12px;">এই গাইডটি সম্পূর্ণ বাংলায় রচিত। Technical Terms ইংরেজিতে সংরক্ষিত।</p>
+  </div>
+</div>
+
+</body>
+</html>

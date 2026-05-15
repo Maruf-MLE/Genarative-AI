@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Layer Normalization — সম্পূর্ণ টেকনিক্যাল গাইড</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Playfair+Display:wght@700;900&display=swap');
+
+  :root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-card: #1c2128;
+    --bg-highlight: #21262d;
+    --accent-gold: #f0c060;
+    --accent-teal: #39d0cc;
+    --accent-rose: #ff6b8a;
+    --accent-violet: #a78bfa;
+    --accent-green: #56d364;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #6e7681;
+    --border: #30363d;
+    --border-accent: #f0c06040;
+    --gradient-1: linear-gradient(135deg, #f0c060, #ff6b8a);
+    --gradient-2: linear-gradient(135deg, #39d0cc, #a78bfa);
+    --gradient-3: linear-gradient(135deg, #56d364, #39d0cc);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Noto Serif Bengali', serif;
+    line-height: 1.9;
+    font-size: 16px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 40px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% -10%, #f0c06018 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: var(--bg-highlight);
+    border: 1px solid var(--accent-gold);
+    color: var(--accent-gold);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 6px 18px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    font-weight: 900;
+    background: var(--gradient-1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+    line-height: 1.2;
+  }
+  .hero-sub {
+    color: var(--text-secondary);
+    font-size: 15px;
+    max-width: 600px;
+    margin: 0 auto 30px;
+  }
+  .hero-tags {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .tag {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 4px;
+  }
+
+  /* ── LAYOUT ── */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 50px 30px;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    margin-bottom: 60px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .icon-gold { background: #f0c06018; border: 1px solid #f0c06040; }
+  .icon-teal { background: #39d0cc18; border: 1px solid #39d0cc40; }
+  .icon-rose { background: #ff6b8a18; border: 1px solid #ff6b8a40; }
+  .icon-violet { background: #a78bfa18; border: 1px solid #a78bfa40; }
+  .icon-green { background: #56d36418; border: 1px solid #56d36440; }
+
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .section-title span {
+    color: var(--accent-gold);
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+  .card-gold { border-left: 3px solid var(--accent-gold); }
+  .card-teal { border-left: 3px solid var(--accent-teal); }
+  .card-rose { border-left: 3px solid var(--accent-rose); }
+  .card-violet { border-left: 3px solid var(--accent-violet); }
+  .card-green { border-left: 3px solid var(--accent-green); }
+
+  .card h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--accent-gold);
+  }
+  .card-teal h3 { color: var(--accent-teal); }
+  .card-rose h3 { color: var(--accent-rose); }
+  .card-violet h3 { color: var(--accent-violet); }
+  .card-green h3 { color: var(--accent-green); }
+
+  .card p { color: var(--text-secondary); margin-bottom: 10px; font-size: 15px; }
+
+  /* ── HIGHLIGHT BOX ── */
+  .highlight-box {
+    background: #f0c06008;
+    border: 1px solid var(--border-accent);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 20px 0;
+  }
+  .highlight-box.teal { background: #39d0cc08; border-color: #39d0cc40; }
+  .highlight-box.rose { background: #ff6b8a08; border-color: #ff6b8a40; }
+  .highlight-box.green { background: #56d36408; border-color: #56d36440; }
+  .highlight-box.violet { background: #a78bfa08; border-color: #a78bfa40; }
+
+  /* ── CODE / MONO ── */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #cdd9e5;
+    overflow-x: auto;
+    margin: 16px 0;
+    white-space: pre;
+  }
+  .kw { color: #f47067; }
+  .fn { color: #dcbdfb; }
+  .str { color: #96d0ff; }
+  .cm { color: #636e7b; font-style: italic; }
+  .num { color: #6cb6ff; }
+  .var { color: #f0c060; }
+
+  /* ── STEP ── */
+  .step-list { list-style: none; }
+  .step-item {
+    display: flex; gap: 18px;
+    margin-bottom: 22px;
+    align-items: flex-start;
+  }
+  .step-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--gradient-1);
+    color: #0d1117;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .step-content { flex: 1; }
+  .step-content strong { color: var(--accent-gold); display: block; margin-bottom: 4px; }
+  .step-content p { color: var(--text-secondary); font-size: 15px; }
+
+  /* ── DIAGRAM / ASCII ── */
+  .diagram {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #8b949e;
+    overflow-x: auto;
+    margin: 20px 0;
+    white-space: pre;
+  }
+  .diagram .d-gold { color: var(--accent-gold); }
+  .diagram .d-teal { color: var(--accent-teal); }
+  .diagram .d-rose { color: var(--accent-rose); }
+  .diagram .d-green { color: var(--accent-green); }
+  .diagram .d-violet { color: var(--accent-violet); }
+
+  /* ── COMPARISON TABLE ── */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  .compare-table th {
+    background: var(--bg-highlight);
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 14px 18px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-table th:first-child { color: var(--accent-gold); }
+  .compare-table th:nth-child(2) { color: var(--accent-teal); }
+  .compare-table th:nth-child(3) { color: var(--accent-rose); }
+  .compare-table td {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 14px;
+    background: var(--bg-card);
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+
+  /* ── FORMULA ── */
+  .formula {
+    background: var(--bg-highlight);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--accent-teal);
+    text-align: center;
+    margin: 16px 0;
+    letter-spacing: 1px;
+  }
+
+  /* ── CALLOUT ── */
+  .callout {
+    display: flex; gap: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 20px 0;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+  .callout-body { flex: 1; }
+  .callout-body strong { color: var(--text-primary); display: block; margin-bottom: 6px; }
+  .callout-body p { color: var(--text-secondary); font-size: 14px; }
+
+  /* ── KEY TERM ── */
+  .kt { 
+    font-family: 'JetBrains Mono', monospace; 
+    font-size: 13px;
+    color: var(--accent-teal);
+    background: #39d0cc10;
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 50px 0;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    padding: 40px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ── GRID ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin: 20px 0;
+  }
+  @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  strong { color: var(--text-primary); }
+  em { color: var(--accent-violet); font-style: normal; }
+
+  .big-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent-gold);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .label { font-size: 13px; color: var(--text-muted); }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ HERO ══ -->
+<div class="hero">
+  <div class="hero-badge">Deep Learning · Transformer Architecture</div>
+  <h1>Batch Normalization vs Layer Normalization</h1>
+  <p class="hero-sub">Transformer আর্কিটেকচারে Normalization কীভাবে কাজ করে — সম্পূর্ণ বাংলা টেকনিক্যাল গাইড</p>
+  <div class="hero-tags">
+    <span class="tag">Normalization</span>
+    <span class="tag">Self-Attention</span>
+    <span class="tag">Transformer</span>
+    <span class="tag">Sequential Data</span>
+    <span class="tag">Padding</span>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="container">
+
+  <!-- ── SECTION 0: CONTEXT ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-gold">🗺️</div>
+      <div>
+        <div class="section-title"><span>০.</span> আমরা কোথায় আছি?</div>
+      </div>
+    </div>
+
+    <div class="card card-gold">
+      <h3>Transformer Architecture-এর মানচিত্র</h3>
+      <p>আমরা Transformer Architecture-এর individual components ধাপে ধাপে শিখছি। এখন পর্যন্ত যা পড়া হয়েছে:</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="big-num">✅</span>
+        <div class="label">Embedding</div>
+      </div>
+      <div class="stat-card">
+        <span class="big-num">✅</span>
+        <div class="label">Self-Attention &amp; Multi-Head Attention</div>
+      </div>
+      <div class="stat-card">
+        <span class="big-num">✅</span>
+        <div class="label">Positional Encoding</div>
+      </div>
+      <div class="stat-card">
+        <span class="big-num">🔥</span>
+        <div class="label">Layer Normalization (আজকের বিষয়)</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>কেন এটি গুরুত্বপূর্ণ?</strong>
+        <p>Transformer Architecture-এর diagram-এ দেখা যায়, Attention-এর ঠিক পরেই একটি <em>Normalization Step</em> আছে। এই step-এ <strong>Layer Normalization</strong> ব্যবহার করা হয় — Batch Normalization নয়। কিন্তু কেন? এটাই আজকের মূল প্রশ্ন।</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 1: INTUITION ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-gold">🎯</div>
+      <div>
+        <div class="section-title"><span>১.</span> Normalization কী এবং কেন দরকার? (Intuition)</div>
+      </div>
+    </div>
+
+    <div class="card card-gold">
+      <h3>বাস্তব জীবনের উদাহরণ — পরীক্ষার নম্বর</h3>
+      <p>মনে করো, একটি ক্লাসে পদার্থবিজ্ঞানে নম্বর ০–১০০ এর মধ্যে, আর গণিতে ০–১০ এর মধ্যে। যদি এই দুটি বিষয়ের নম্বর একসাথে কোনো model-এ দেওয়া হয়, তাহলে model পদার্থবিজ্ঞানকে "বেশি গুরুত্বপূর্ণ" মনে করবে শুধুমাত্র scale বড় বলে। Normalization এই সমস্যা সমাধান করে — সব নম্বরকে একই range-এ নিয়ে আসে।</p>
+    </div>
+
+    <div class="highlight-box">
+      <strong style="color: var(--accent-gold);">Deep Learning-এ Normalization মানে:</strong>
+      <p style="color: var(--text-secondary); margin-top: 8px;">Data-কে এমনভাবে transform করা যাতে নির্দিষ্ট statistical properties থাকে। যেমন: <strong>Mean = 0, Standard Deviation = 1</strong>।</p>
+    </div>
+
+    <p style="color: var(--text-secondary); margin-bottom: 16px;">Deep Learning-এ <strong>দুটি জিনিসে</strong> normalization প্রয়োগ করা যায়:</p>
+
+    <div class="grid-2">
+      <div class="card card-teal">
+        <h3>① Input Data-তে</h3>
+        <p>Model-এ পাঠানো feature values গুলোকে normalize করা হয়। এটি আমরা Machine Learning থেকেই জানি — Standardization বা Min-Max Scaling।</p>
+      </div>
+      <div class="card card-rose">
+        <h3>② Hidden Layer Activations-এ</h3>
+        <p>Neural Network-এর hidden layer গুলোর output (activation) normalize করা হয়। এটিই আজকের মূল আলোচনা।</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 1B: BENEFITS ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-teal">⚡</div>
+      <div>
+        <div class="section-title"><span>১.১</span> Normalization-এর ৪টি উপকার</div>
+      </div>
+    </div>
+
+    <ul class="step-list">
+      <li class="step-item">
+        <div class="step-num">১</div>
+        <div class="step-content">
+          <strong>Training Stability উন্নত হয়</strong>
+          <p>Weight অনেক বড় হয়ে গেলে activation-ও বড় হয়, model দ্রুত converge করে না। Normalization এই extreme values কমিয়ে training স্থিতিশীল রাখে এবং Gradient Explosion রোধ করে।</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">২</div>
+        <div class="step-content">
+          <strong>দ্রুত Convergence</strong>
+          <p>Gradient-গুলোর magnitude consistent হলে model দ্রুত converge করে। Normalization ঠিক এটাই নিশ্চিত করে।</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">৩</div>
+        <div class="step-content">
+          <strong>Internal Covariate Shift সমস্যা সমাধান</strong>
+          <p>Training চলার সময় weights পরিবর্তিত হওয়ার কারণে hidden layer-এ input distribution পরিবর্তন হতে থাকে — এটিই Internal Covariate Shift। Normalization এই পরিবর্তন নিয়ন্ত্রণে রাখে।</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">৪</div>
+        <div class="step-content">
+          <strong>Regularization Effect</strong>
+          <p>কিছু normalization technique (বিশেষত Batch Normalization) হালকা regularization effect দেয়, overfitting কমাতে সাহায্য করে।</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 2: COVARIATE SHIFT ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-rose">🔄</div>
+      <div>
+        <div class="section-title"><span>২.</span> Covariate Shift ও Internal Covariate Shift</div>
+      </div>
+    </div>
+
+    <div class="card card-rose">
+      <h3>Covariate Shift কী?</h3>
+      <p>Training-এ এক ধরনের data দিয়ে model train করা হল, কিন্তু prediction করতে গিয়ে ভিন্ন distribution-এর data এলে model ভালো কাজ করে না।</p>
+      <div class="highlight-box rose" style="margin-top: 14px;">
+        <strong style="color: var(--accent-rose);">উদাহরণ:</strong>
+        <p style="color: var(--text-secondary); margin-top: 6px;">Flower classification model শুধু লাল গোলাপ দিয়ে train করা হল। কিন্তু prediction-এ হলুদ গোলাপ, সাদা গোলাপ দেওয়া হলে distribution আলাদা — তাই model ব্যর্থ হবে।</p>
+      </div>
+    </div>
+
+    <div class="card card-violet">
+      <h3>Internal Covariate Shift কী?</h3>
+      <p>এটি Neural Network-এর <em>ভেতরে</em> ঘটে। Backpropagation চলার সময় weights পরিবর্তিত হয়। এর ফলে পরবর্তী layer যে input পায়, তার distribution ক্রমাগত পরিবর্তন হতে থাকে।</p>
+    </div>
+
+    <div class="diagram">
+┌─────────────────────────────────────────────────────────┐
+│               Internal Covariate Shift                   │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  Input → [Hidden Layer 1] → [Hidden Layer 2] → Output   │
+│                ↑                   ↑                    │
+│           w₁, w₂ আছে         এর input আসে               │
+│                                Hidden Layer 1 থেকে      │
+│                                                         │
+│  Backprop চলতে থাকলে w₁, w₂ পরিবর্তন হয়               │
+│  → Hidden Layer 1-এর output বদলায়                       │
+│  → Hidden Layer 2-এর INPUT-ও বদলায়                      │
+│  → Hidden Layer 2 সবসময় নতুন distribution দেখছে         │
+│  → এটাই Internal Covariate Shift!                        │
+│                                                         │
+│  সমাধান: Activation-গুলো Normalize করা                  │
+└─────────────────────────────────────────────────────────┘</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 3: BATCH NORM DEEP DIVE ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-teal">📦</div>
+      <div>
+        <div class="section-title"><span>৩.</span> Batch Normalization — বিস্তারিত Process</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-icon">📋</div>
+      <div class="callout-body">
+        <strong>Setup (উদাহরণ)</strong>
+        <p>একটি Dataset আছে যেখানে ২টি feature: f1 এবং f2। একটি Neural Network: Input Layer → Hidden Layer (৩টি node) → Output Layer। Batch Size = 5 (একসাথে ৫টি row যাবে)।</p>
+      </div>
+    </div>
+
+    <div class="diagram">
+Dataset:
+┌────┬────┬────────┐
+│ f1 │ f2 │ target │
+├────┼────┼────────┤
+│  2 │  3 │  ...   │  ← row 1
+│  1 │  1 │  ...   │  ← row 2
+│  4 │  2 │  ...   │  ← row 3
+│  3 │  5 │  ...   │  ← row 4
+│  6 │  1 │  ...   │  ← row 5
+└────┴────┴────────┘
+
+Neural Network:
+  f1 ──┐
+       ├──→ [node1 (z1)] ──→
+  f2 ──┤
+       ├──→ [node2 (z2)] ──→  Output
+       │
+       └──→ [node3 (z3)] ──→</div>
+
+    <h3 style="color: var(--accent-teal); margin: 24px 0 16px;">Step-by-Step Process:</h3>
+
+    <ul class="step-list">
+      <li class="step-item">
+        <div class="step-num">১</div>
+        <div class="step-content">
+          <strong>Pre-activation (Weighted Sum) কালকুলেট করো</strong>
+          <p>প্রতিটি row এর জন্য, প্রতিটি node-এর weighted sum বের করো:</p>
+          <div class="formula">z1 = (f1 × w1) + (f2 × w2) + b1</div>
+          <p>এভাবে সব ৫টি row-এর জন্য z1, z2, z3 কালকুলেট করলে একটি table তৈরি হয়:</p>
+        </div>
+      </li>
+    </ul>
+
+    <div class="diagram">
+Pre-activation table (উদাহরণ মান):
+┌───────┬────┬────┬────┐
+│  Row  │ z1 │ z2 │ z3 │
+├───────┼────┼────┼────┤
+│ row 1 │  7 │  5 │  4 │
+│ row 2 │  2 │  3 │  4 │
+│ row 3 │  1 │  7 │  7 │
+│ row 4 │  5 │  3 │  5 │
+│ row 5 │  3 │  6 │  3 │
+└───────┴────┴────┴────┘
+
+Batch Normalization করে COLUMN অনুযায়ী (↓ direction):
+  z1 column → μ₁ ও σ₁ বের করো
+  z2 column → μ₂ ও σ₂ বের করো
+  z3 column → μ₃ ও σ₃ বের করো</div>
+
+    <ul class="step-list">
+      <li class="step-item">
+        <div class="step-num">২</div>
+        <div class="step-content">
+          <strong>প্রতিটি Column-এর μ (mean) ও σ (std) বের করো</strong>
+          <div class="formula">μ₁ = mean(z1 column),  σ₁ = std(z1 column)</div>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">৩</div>
+        <div class="step-content">
+          <strong>Normalize করো (Standardize)</strong>
+          <div class="formula">ẑ = (z - μ) / σ</div>
+          <p>যেমন row 1-এর z1 = 7 হলে:  ẑ = (7 - μ₁) / σ₁</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">৪</div>
+        <div class="step-content">
+          <strong>Scale &amp; Shift (γ ও β দিয়ে)</strong>
+          <p>প্রতিটি node-এর নিজস্ব learnable parameter γ (gamma) ও β (beta) আছে। এগুলো initially γ=1, β=0 হয়, training-এ শেখে।</p>
+          <div class="formula">output = γ × ẑ + β</div>
+          <p>Node 1 এর জন্য: <span class="kt">γ₁</span>, <span class="kt">β₁</span> | Node 2: <span class="kt">γ₂</span>, <span class="kt">β₂</span> | Node 3: <span class="kt">γ₃</span>, <span class="kt">β₃</span></p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">৫</div>
+        <div class="step-content">
+          <strong>Activation Function-এ পাঠাও</strong>
+          <p>Normalize করা value activation function (ReLU, sigmoid ইত্যাদি)-এ যায়, তারপর সেটাই পরের layer-এর input।</p>
+        </div>
+      </li>
+    </ul>
+
+    <div class="highlight-box teal">
+      <strong style="color: var(--accent-teal);">🔑 মূল কথা — Batch Normalization normalize করে ACROSS THE BATCH (column অনুযায়ী, ↓ direction)।</strong>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 4: WHY NOT BATCH NORM FOR TRANSFORMER ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-rose">❌</div>
+      <div>
+        <div class="section-title"><span>৪.</span> Transformer-এ Batch Norm কেন কাজ করে না?</div>
+      </div>
+    </div>
+
+    <div class="card card-rose">
+      <h3>মূল সমস্যা: Sequential Data + Padding</h3>
+      <p>Transformer Self-Attention-এর সাথে Batch Normalization ভালো কাজ করে না। এর কারণ sequential data-তে padding-এর প্রয়োজন পড়ে।</p>
+    </div>
+
+    <h3 style="color: var(--text-primary); margin: 24px 0 16px;">পুরো সমস্যাটি বুঝি — একটি উদাহরণ দিয়ে:</h3>
+
+    <div class="callout">
+      <div class="callout-icon">📝</div>
+      <div class="callout-body">
+        <strong>Setup: Sentiment Analysis</strong>
+        <p>Dataset-এ ৪টি sentence আছে। Batch size = 2 (একসাথে ২টি sentence পাঠাব)।<br>
+        Embedding dimension = 3 (প্রতিটি word 3D vector)।</p>
+      </div>
+    </div>
+
+    <div class="diagram">
+Dataset:
+  Sentence 1: "Hi Nitesh"           → ২টি word
+  Sentence 2: "How are you today"   → ৪টি word
+  Sentence 3: "I am good"           → ৩টি word
+  Sentence 4: "You?"                → ১টি word
+
+First Batch: Sentence 1 + Sentence 2 একসাথে যাবে
+
+সমস্যা: Sentence 1-এ ২টি word, Sentence 2-এ ৪টি word
+        Self-Attention-এ equal-length input দরকার!
+
+সমাধান: PADDING ব্যবহার করো
+  Sentence 1: "Hi  Nitesh  [PAD] [PAD]" → ৪টি word (2টি zero vector যোগ)
+  Sentence 2: "How are    you   today"   → ৪টি word</div>
+
+    <h3 style="color: var(--text-primary); margin: 24px 0 16px;">Self-Attention-এর Output:</h3>
+    <p style="color: var(--text-secondary); margin-bottom: 16px;">Self-Attention-এ দুটি matrix (4×3) পাঠানো হল। Output-ও দুটি 4×3 matrix পাবো। PAD token-গুলোর output = zero (কারণ zero × যেকোনো সংখ্যা = zero)।</p>
+
+    <div class="diagram">
+Output (Contextual Embeddings), ২টি matrix স্ট্যাক করলে:
+
+         dim-1   dim-2   dim-3
+word-1 [  6.5  |  2.4  | 99.2  ]  ← Sentence 1, word "Hi"
+word-2 [  3.1  |  7.8  |  1.5  ]  ← Sentence 1, word "Nitesh"
+[PAD]  [  0.0  |  0.0  |  0.0  ]  ← ⚠️ PADDING (আসল data না!)
+[PAD]  [  0.0  |  0.0  |  0.0  ]  ← ⚠️ PADDING (আসল data না!)
+word-1 [  4.2  |  8.9  |  2.3  ]  ← Sentence 2, word "How"
+word-2 [  5.5  |  1.2  | 67.4  ]  ← Sentence 2, word "are"
+word-3 [  9.1  |  3.3  |  4.8  ]  ← Sentence 2, word "you"
+word-4 [  2.7  |  6.6  | 11.2  ]  ← Sentence 2, word "today"
+
+Batch Norm করতে গেলে COLUMN (dim) অনুযায়ী μ, σ বের করতে হবে ↓
+
+dim-1: mean(6.5, 3.1, 0.0, 0.0, 4.2, 5.5, 9.1, 2.7)
+       ↑ এখানে 0.0 এবং 0.0 আছে যেগুলো REAL DATA নয়, শুধু PADDING!
+
+🚨 সমস্যা: এই zero values mean ও std কে distort করছে!</div>
+
+    <div class="highlight-box rose">
+      <strong style="color: var(--accent-rose);">🚨 মূল সমস্যা কী?</strong>
+      <p style="color: var(--text-secondary); margin-top: 8px;">
+        যদি batch size 32 হয় এবং সবচেয়ে বড় sentence 100 word-এর হয়, কিন্তু বাকিগুলো গড়ে 30 word-এর — তাহলে প্রতিটি sentence-এ <strong>70টি করে PADDING vector (সব zero)</strong> থাকবে! এই অসংখ্য artificial zero গুলো mean ও std-এর true representation নষ্ট করে দেবে। Batch Normalization-এর μ ও σ তখন আর data-র সত্যিকার চিত্র দেখাবে না।
+      </p>
+    </div>
+
+    <div class="callout">
+      <div class="callout-icon">🎓</div>
+      <div class="callout-body">
+        <strong>উপসংহার</strong>
+        <p>Padding-এর কারণে তৈরি হওয়া zero values batch-এর statistics (μ, σ) distort করে। তাই Sequential data-তে Batch Normalization প্রয়োগ করা যায় না। এটাই Transformer-এ Batch Norm ব্যবহার না করার কারণ।</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 5: LAYER NORMALIZATION ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-green">✅</div>
+      <div>
+        <div class="section-title"><span>৫.</span> Layer Normalization — সমাধান</div>
+      </div>
+    </div>
+
+    <div class="card card-green">
+      <h3>Layer Normalization-এর মূল পার্থক্য</h3>
+      <p>Batch Normalization যেখানে <strong>column অনুযায়ী (batch জুড়ে)</strong> normalize করে, সেখানে Layer Normalization করে <strong>row অনুযায়ী (feature জুড়ে)</strong>।</p>
+    </div>
+
+    <div class="diagram">
+BATCH NORMALIZATION:              LAYER NORMALIZATION:
+normalize করে ↓ direction-এ      normalize করে → direction-এ
+
+       dim1  dim2  dim3                   dim1  dim2  dim3
+row1 [  7  |  5  |  4  ]  ────→   row1 [  7  |  5  |  4  ] → μ₁, σ₁
+row2 [  2  |  3  |  4  ]           row2 [  2  |  3  |  4  ] → μ₂, σ₂
+row3 [  1  |  7  |  7  ]           row3 [  1  |  7  |  7  ] → μ₃, σ₃
+row4 [  5  |  3  |  5  ]           row4 [  5  |  3  |  5  ] → μ₄, σ₄
+row5 [  3  |  6  |  3  ]           row5 [  3  |  6  |  3  ] → μ₅, σ₅
+  ↓    ↓    ↓    ↓
+ μ₁  μ₂   μ₃   (batch statistics)    (প্রতিটি row স্বতন্ত্র!)</div>
+
+    <h3 style="color: var(--text-primary); margin: 24px 0 16px;">Layer Normalization-এর Step-by-Step Process:</h3>
+
+    <ul class="step-list">
+      <li class="step-item">
+        <div class="step-num">১</div>
+        <div class="step-content">
+          <strong>প্রতিটি Row-এর নিজস্ব μ ও σ বের করো</strong>
+          <p>Row-1 (data point 1): সেই row-এর সব feature value দিয়ে μ₁ ও σ₁ বের করো।</p>
+          <div class="formula">μ₁ = mean(z1, z2, z3) for row 1 only<br>σ₁ = std(z1, z2, z3) for row 1 only</div>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">২</div>
+        <div class="step-content">
+          <strong>প্রতিটি Value Normalize করো</strong>
+          <p>Row-1-এর z1 normalize করতে:</p>
+          <div class="formula">ẑ₁₁ = (z1_row1 - μ₁) / σ₁</div>
+          <p>একইভাবে সেই row-এর বাকি values-গুলো: z2_row1 ও z3_row1 normalize করো।</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">৩</div>
+        <div class="step-content">
+          <strong>Scale &amp; Shift: প্রতিটি Dimension-এর γ ও β</strong>
+          <p>Batch Norm-এর মতো এখানেও learnable parameters আছে। তবে এখানে প্রতিটি <em>embedding dimension</em>-এর জন্য γ ও β।</p>
+          <div class="formula">output = γ_dim × ẑ + β_dim</div>
+          <p>dim-1 এর জন্য: <span class="kt">γ₁</span>, <span class="kt">β₁</span> | dim-2: <span class="kt">γ₂</span>, <span class="kt">β₂</span> | dim-3: <span class="kt">γ₃</span>, <span class="kt">β₃</span></p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">৪</div>
+        <div class="step-content">
+          <strong>সব Rows-এর জন্য একই Process পুনরাবৃত্তি</strong>
+          <p>Row-2 এর জন্য আলাদা μ₂, σ₂ বের করে আলাদাভাবে normalize। Row-3, Row-4... সব স্বতন্ত্রভাবে।</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ── SECTION 6: WHY LAYER NORM SOLVES THE PROBLEM ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-green">🎯</div>
+      <div>
+        <div class="section-title"><span>৬.</span> Transformer-এ Layer Norm কেন কাজ করে?</div>
+      </div>
+    </div>
+
+    <p style="color: var(--text-secondary); margin-bottom: 20px;">আগের উদাহরণে ফিরে যাই — Sentence 1 ও Sentence 2 সহ Padding-এর output matrix:</p>
+
+    <div class="diagram">
+Self-Attention Output (stacked):
+
+         dim-1   dim-2   dim-3      Layer Norm →
+word-1 [  6.5  |  2.4  | 99.2  ]  → μ₁ = mean(6.5, 2.4, 99.2), σ₁ = std(...)
+word-2 [  3.1  |  7.8  |  1.5  ]  → μ₂ = mean(3.1, 7.8, 1.5),  σ₂ = std(...)
+[PAD]  [  0.0  |  0.0  |  0.0  ]  → μ₃ = mean(0,0,0) = 0,       σ₃ = 0
+[PAD]  [  0.0  |  0.0  |  0.0  ]  → μ₄ = mean(0,0,0) = 0,       σ₄ = 0
+word-1 [  4.2  |  8.9  |  2.3  ]  → μ₅ = mean(4.2, 8.9, 2.3)
+word-2 [  5.5  |  1.2  | 67.4  ]  → μ₆ = mean(5.5, 1.2, 67.4)
+word-3 [  9.1  |  3.3  |  4.8  ]  → μ₇ = mean(9.1, 3.3, 4.8)
+word-4 [  2.7  |  6.6  | 11.2  ]  → μ₈ = mean(2.7, 6.6, 11.2)
+
+✅ প্রতিটি ROW স্বতন্ত্রভাবে normalize হচ্ছে!
+✅ PAD rows শুধু নিজেদের মধ্যে নিজেরাই normalize হচ্ছে (0/0 → 0)
+✅ PAD, আসল data-র statistics-কে প্রভাবিত করছে না!</div>
+
+    <div class="highlight-box green">
+      <strong style="color: var(--accent-green);">🎉 সমাধান!</strong>
+      <p style="color: var(--text-secondary); margin-top: 8px;">
+        Layer Normalization-এ প্রতিটি row (প্রতিটি word/token) <strong>নিজের features দিয়ে নিজেই</strong> normalize হয়। PAD token-গুলো শুধু নিজেদের মধ্যে normalize হয় (0 - 0 / 0 = 0), এবং আসল data-র statistics কে কোনোভাবেই distort করে না। এটাই Layer Normalization-এর সবচেয়ে বড় সুবিধা Transformer-এ।
+      </p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 7: VISUAL DIAGRAM ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-violet">🎨</div>
+      <div>
+        <div class="section-title"><span>৭.</span> Visual Diagrams</div>
+      </div>
+    </div>
+
+    <h3 style="color: var(--accent-violet); margin-bottom: 16px;">Transformer-এ Layer Norm-এর অবস্থান:</h3>
+
+    <div class="diagram">
+                 ┌──────────────────────────────────┐
+                 │      TRANSFORMER BLOCK           │
+                 └──────────────────────────────────┘
+
+   Input Embeddings + Positional Encoding
+              │
+              ↓
+   ┌────────────────────────┐
+   │   Multi-Head           │
+   │   Self-Attention       │
+   └────────────────────────┘
+              │
+              ↓  ← এখানে Layer Norm লাগানো হয়!
+   ┌────────────────────────┐
+   │   Add & Layer Norm     │  (Residual Connection + Layer Norm)
+   └────────────────────────┘
+              │
+              ↓
+   ┌────────────────────────┐
+   │   Feed Forward         │
+   │   Network              │
+   └────────────────────────┘
+              │
+              ↓  ← এখানেও Layer Norm লাগানো হয়!
+   ┌────────────────────────┐
+   │   Add & Layer Norm     │
+   └────────────────────────┘
+              │
+              ↓
+          Output</div>
+
+    <h3 style="color: var(--accent-violet); margin: 28px 0 16px;">Batch Norm vs Layer Norm — Side by Side:</h3>
+
+    <div class="diagram">
+┌─────────────────────────────┬─────────────────────────────┐
+│     BATCH NORMALIZATION      │     LAYER NORMALIZATION      │
+├─────────────────────────────┼─────────────────────────────┤
+│                             │                             │
+│  B1: [7, 5, 4]  ─── ↓       │  B1: [7, 5, 4]  ─── →       │
+│  B2: [2, 3, 4]  ─── ↓       │  B2: [2, 3, 4]  ─── →       │
+│  B3: [1, 7, 7]  ─── ↓       │  B3: [1, 7, 7]  ─── →       │
+│  B4: [5, 3, 5]  ─── ↓       │  B4: [5, 3, 5]  ─── →       │
+│  B5: [3, 6, 3]  ─── ↓       │  B5: [3, 6, 3]  ─── →       │
+│     ↓   ↓   ↓               │    μ₁  μ₂  μ₃  μ₄  μ₅       │
+│    μ₁  μ₂  μ₃               │  (প্রতিটি row আলাদা)          │
+│  (batch statistics)         │  (row statistics)           │
+│                             │                             │
+│  ✗ Padding দূষিত করে        │  ✓ Padding শুধু নিজেকে       │
+│    statistics               │    affect করে               │
+└─────────────────────────────┴─────────────────────────────┘</div>
+
+    <h3 style="color: var(--accent-violet); margin: 28px 0 16px;">Full Process Flow Diagram:</h3>
+
+    <div class="diagram">
+INPUT SENTENCE: "River Bank"
+        │
+        ↓ Tokenize
+   ["River", "Bank"]
+        │
+        ↓ Embedding
+   River: [e1, e2, e3]
+   Bank:  [e4, e5, e6]
+        │
+        ↓ Self-Attention Module
+   (Q, K, V matrices → Attention scores → Contextual embeddings)
+        │
+        ↓ Output: Contextual Embeddings
+   River_ctx: [c1, c2, c3]   ← এই row-এর mean ও std দিয়ে normalize
+   Bank_ctx:  [c4, c5, c6]   ← এই row-এর mean ও std দিয়ে normalize
+        │
+        ↓ Layer Normalization
+   River_norm: [n1, n2, n3]  = (c_i - μ_river) / σ_river × γ + β
+   Bank_norm:  [n4, n5, n6]  = (c_i - μ_bank) / σ_bank × γ + β
+        │
+        ↓ Feed Forward Network
+      Output</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 8: COMPARISON TABLE ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-gold">📊</div>
+      <div>
+        <div class="section-title"><span>৮.</span> Batch Norm vs Layer Norm — তুলনামূলক সারসংক্ষেপ</div>
+      </div>
+    </div>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>বৈশিষ্ট্য</th>
+          <th>Batch Normalization</th>
+          <th>Layer Normalization</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Normalize করে</strong></td>
+          <td>Batch জুড়ে (column অনুযায়ী, ↓)</td>
+          <td>Feature জুড়ে (row অনুযায়ী, →)</td>
+        </tr>
+        <tr>
+          <td><strong>μ, σ বের হয়</strong></td>
+          <td>প্রতিটি feature-এর জন্য (batch থেকে)</td>
+          <td>প্রতিটি data point-এর জন্য (features থেকে)</td>
+        </tr>
+        <tr>
+          <td><strong>γ, β কোথায়</strong></td>
+          <td>প্রতিটি node/feature-এর জন্য</td>
+          <td>প্রতিটি embedding dimension-এর জন্য</td>
+        </tr>
+        <tr>
+          <td><strong>Sequential Data</strong></td>
+          <td>❌ Padding-এর কারণে ব্যর্থ</td>
+          <td>✅ Padding affect করে না</td>
+        </tr>
+        <tr>
+          <td><strong>Transformer-এ ব্যবহার</strong></td>
+          <td>❌ ব্যবহার হয় না</td>
+          <td>✅ ব্যবহার হয় (Add &amp; Norm step)</td>
+        </tr>
+        <tr>
+          <td><strong>Variable-length input</strong></td>
+          <td>❌ সমস্যা আছে</td>
+          <td>✅ কোনো সমস্যা নেই</td>
+        </tr>
+        <tr>
+          <td><strong>Batch size dependency</strong></td>
+          <td>হ্যাঁ — batch size-এর উপর নির্ভরশীল</td>
+          <td>না — প্রতিটি sample স্বতন্ত্র</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 9: FORMULA SUMMARY ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-teal">📐</div>
+      <div>
+        <div class="section-title"><span>৯.</span> Mathematical Formula Summary</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card card-gold">
+        <h3>Batch Normalization</h3>
+        <div class="formula" style="font-size: 12px; text-align: left;">
+μ_j = (1/N) × Σ z_ij   (j-th feature, N samples)
+σ_j = sqrt((1/N) × Σ(z_ij - μ_j)²)
+ẑ_ij = (z_ij - μ_j) / σ_j
+output = γ_j × ẑ_ij + β_j</div>
+      </div>
+      <div class="card card-green">
+        <h3>Layer Normalization</h3>
+        <div class="formula" style="font-size: 12px; text-align: left;">
+μ_i = (1/D) × Σ z_ij   (i-th sample, D features)
+σ_i = sqrt((1/D) × Σ(z_ij - μ_i)²)
+ẑ_ij = (z_ij - μ_i) / σ_i
+output = γ_j × ẑ_ij + β_j</div>
+      </div>
+    </div>
+
+    <div class="highlight-box violet">
+      <strong style="color: var(--accent-violet);">💡 একটু সূক্ষ্ম পার্থক্য লক্ষ্য করো:</strong>
+      <p style="color: var(--text-secondary); margin-top: 8px;">
+        Batch Norm-এ μ ও σ-এর subscript হল <em>j</em> (feature index)।<br>
+        Layer Norm-এ μ ও σ-এর subscript হল <em>i</em> (sample/row index)।<br>
+        এই একটি পার্থক্যই পুরো normalization direction বদলে দেয়।
+      </p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 10: KEY TAKEAWAYS ── -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon icon-gold">🏆</div>
+      <div>
+        <div class="section-title"><span>১০.</span> মূল শিক্ষা — যা মনে রাখতে হবে</div>
+      </div>
+    </div>
+
+    <div class="card card-gold">
+      <h3>সবচেয়ে গুরুত্বপূর্ণ ৫টি Point</h3>
+    </div>
+
+    <ul class="step-list">
+      <li class="step-item">
+        <div class="step-num">১</div>
+        <div class="step-content">
+          <strong>Normalization কেন দরকার?</strong>
+          <p>Training stability, faster convergence, internal covariate shift সমাধান, এবং regularization effect।</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">২</div>
+        <div class="step-content">
+          <strong>Batch Norm কীভাবে কাজ করে?</strong>
+          <p>Batch জুড়ে প্রতিটি feature (column) আলাদাভাবে normalize করে। প্রতিটি node-এর নিজস্ব γ, β আছে।</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">৩</div>
+        <div class="step-content">
+          <strong>Transformer-এ Batch Norm কেন নয়?</strong>
+          <p>Sequential data-তে padding (zero vectors) অনেক বেশি থাকে। এই কৃত্রিম শূন্যগুলো batch statistics (μ, σ) কে distort করে।</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">৪</div>
+        <div class="step-content">
+          <strong>Layer Norm কীভাবে সমাধান করে?</strong>
+          <p>প্রতিটি row (প্রতিটি token) নিজের features দিয়ে নিজে normalize হয়। Padding শুধু নিজেকে affect করে, অন্যদের statistics নষ্ট করে না।</p>
+        </div>
+      </li>
+      <li class="step-item">
+        <div class="step-num">৫</div>
+        <div class="step-content">
+          <strong>মূল পার্থক্য এক লাইনে:</strong>
+          <p><strong>Batch Norm = across batch (↓ column direction)</strong> | <strong>Layer Norm = across features (→ row direction)</strong></p>
+        </div>
+      </li>
+    </ul>
+
+    <div class="callout">
+      <div class="callout-icon">🚀</div>
+      <div class="callout-body">
+        <strong>পরবর্তী ধাপ</strong>
+        <p>Layer Normalization শেখার পর, Transformer Architecture-এর সব মূল component (Embedding, Self-Attention, Multi-Head Attention, Positional Encoding, Layer Norm) সম্পূর্ণ হয়েছে। এখন পূর্ণ Transformer Architecture পড়া শুরু হবে।</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── FOOTER ── -->
+<div class="footer">
+  <p>Deep Learning Series · Transformer Architecture</p>
+  <p style="margin-top: 6px; color: #484f58;">Batch Normalization vs Layer Normalization · Complete Bengali Technical Guide</p>
+</div>
+
+</body>
+</html>
